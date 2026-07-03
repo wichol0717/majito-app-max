@@ -12,6 +12,13 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
+// Tipografías Majito It's Max
+import "@fontsource/poppins/400.css";
+import "@fontsource/poppins/600.css";
+import "@fontsource/poppins/700.css";
+import "@fontsource/dm-sans/400.css";
+import "@fontsource/dm-sans/500.css";
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -77,14 +84,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Majito Cake — Repostería artesanal en Tuxpan, Veracruz" },
+      {
+        name: "description",
+        content:
+          "Pasteles personalizados, galletas, El Carrito de eventos y línea de regalos. Hecho a mano en Tuxpan, Veracruz.",
+      },
+      { name: "author", content: "Majito Cake" },
+      { property: "og:title", content: "Majito Cake — It's Max" },
+      {
+        property: "og:description",
+        content:
+          "Cuádruple tracción: Mostrador, Personalizados, Eventos y Regalos. Cero comisiones, 100% Tuxpan.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
