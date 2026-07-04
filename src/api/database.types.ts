@@ -10,20 +10,22 @@ export interface Database {
     Tables: {
       products: {
         Row: {
-          id: string;
-          name: string;
-          price: number;
-          stock_count: number;
-          is_active: boolean;
-          created_at: string;
+          id: number;
+          nombre: string;
+          precio: number;
+          categoria: string | null;
+          activo: string; // "SI" | "NO"
+          img: string | null;
+          descripcion: string | null;
         };
         Insert: {
-          id?: string;
-          name: string;
-          price: number;
-          stock_count?: number;
-          is_active?: boolean;
-          created_at?: string;
+          id?: number;
+          nombre: string;
+          precio: number;
+          categoria?: string | null;
+          activo?: string;
+          img?: string | null;
+          descripcion?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
         Relationships: [];
