@@ -5,26 +5,16 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+// Proyecto Supabase de Tuxpan (llaves publicables: la seguridad real vive en RLS).
+const SUPABASE_URL = "https://jntrxjvntiwrmjzsxona.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudHJ4anZudGl3cm1qenN4b25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDc4MDYsImV4cCI6MjA5NzM4MzgwNn0.Q4IfYwFur9sOU3GPM88bOdlHNOMSygrtxdvei8ZUiQg";
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  // Aviso humano (Pilar 6: Transparencia Humana)
-  console.warn(
-    "Oye Majito, todavía no están configuradas las llaves de Supabase. " +
-      "Agrega VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en las variables del proyecto.",
-  );
-}
-
-export const supabase = createClient<Database>(
-  supabaseUrl ?? "https://placeholder.supabase.co",
-  supabaseAnonKey ?? "placeholder-anon-key",
-  {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
   },
-);
+});
 
-export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+export const isSupabaseConfigured = true;
