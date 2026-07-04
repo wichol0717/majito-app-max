@@ -17,6 +17,7 @@ export interface Database {
           activo: string; // "SI" | "NO"
           img: string | null;
           descripcion: string | null;
+          stock: number;
         };
         Insert: {
           id?: number;
@@ -26,6 +27,7 @@ export interface Database {
           activo?: string;
           img?: string | null;
           descripcion?: string | null;
+          stock?: number;
         };
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
         Relationships: [];

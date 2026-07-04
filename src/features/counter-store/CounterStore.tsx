@@ -2,23 +2,25 @@
 // Ruta A: Catálogo de mostrador con stock vivo (esqueleto v1).
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/api/supabase";
-import type { Database } from "@/api/database.types";
+import { ShoppingBag } from "lucide-react";
+import { supabase } from "@/api/supabase";
+import { CartProvider, type Product, useCart } from "./CartContext";
+import { ProductCard } from "./ProductCard";
+import { GiftModal } from "./GiftModal";
+import { CartPanel } from "./CartPanel";
 
-type Product = Database["public"]["Tables"]["products"]["Row"];
+const CATEGORIA_INICIAL = "Galletas";
 
-export function CounterStore() {
+function CounterStoreInner() {
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [categoria, setCategoria] = useState<string>("Todos");
+  const [categoria, setCategoria] = useState<string>(CATEGORIA_INICIAL);
+  const [giftProduct, setGiftProduct] = useState<Product | null>(null);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const { totalItems } = useCart();
 
   useEffect(() => {
-    if (!isSupabaseConfigured) {
-      setError("Oye Majito, faltan las llaves de Supabase para ver el mostrador.");
-      setLoading(false);
-      return;
-    }
     supabase
       .from("products")
       .select("*")
@@ -26,9 +28,7 @@ export function CounterStore() {
       .order("categoria")
       .then(({ data, error }) => {
         if (error) {
-          setError(
-            "Oye Majito, no pudimos leer el catálogo (" + error.message + "). Intenta de nuevo.",
-          );
+          setError("Oye Majito, no pudimos leer el catálogo (" + error.message + ").");
         } else {
           setProducts(data ?? []);
         }
@@ -39,10 +39,16 @@ export function CounterStore() {
   const categorias = useMemo(() => {
     const set = new Set<string>();
     products.forEach((p) => p.categoria && set.add(p.categoria));
-    return ["Todos", ...Array.from(set).sort()];
+    return Array.from(set).sort();
   }, [products]);
 
-  const visibles = categoria === "Todos" ? products : products.filter((p) => p.categoria === categoria);
+  useEffect(() => {
+    if (categorias.length && !categorias.includes(categoria)) {
+      setCategoria(categorias.includes(CATEGORIA_INICIAL) ? CATEGORIA_INICIAL : categorias[0]);
+    }
+  }, [categorias, categoria]);
+
+  const visibles = products.filter((p) => p.categoria === categoria);
 
   if (loading) return <p className="text-mocha">Cargando el mostrador…</p>;
   if (error)
@@ -52,65 +58,61 @@ export function CounterStore() {
       </div>
     );
 
-  if (products.length === 0) {
-    return (
-      <div className="rounded-2xl border border-dashed border-mocha/40 bg-white p-8 text-center text-mocha">
-        Aún no hay productos en el mostrador. Agrega el primero desde el panel de Supabase.
-      </div>
-    );
-  }
-
   return (
-    <div>
-      <div className="mb-5 flex flex-wrap gap-2">
-        {categorias.map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setCategoria(c)}
-            className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-              categoria === c
-                ? "bg-shocking text-white shadow"
-                : "bg-white text-mocha ring-1 ring-mocha/20 hover:bg-sunset"
-            }`}
-          >
-            {c}
-          </button>
-        ))}
+    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div>
+        <div className="mb-5 flex flex-wrap gap-2">
+          {categorias.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setCategoria(c)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                categoria === c
+                  ? "bg-shocking text-white shadow"
+                  : "bg-white text-mocha ring-1 ring-mocha/20 hover:bg-sunset"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
+        {visibles.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-mocha/40 bg-white p-8 text-center text-mocha">
+            No hay productos activos en esta categoría.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {visibles.map((p) => (
+              <ProductCard key={p.id} product={p} onGiftClick={setGiftProduct} />
+            ))}
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visibles.map((p) => (
-          <article
-            key={p.id}
-            className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-mocha/10 transition hover:-translate-y-1 hover:shadow-md"
-          >
-            {p.img ? (
-              <img
-                src={p.img}
-                alt={p.nombre}
-                loading="lazy"
-                className="h-44 w-full object-cover"
-                onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
-              />
-            ) : (
-              <div className="flex h-44 items-center justify-center bg-sunset text-4xl">🍰</div>
-            )}
-            <div className="flex flex-1 flex-col p-4">
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-mocha">
-                {p.categoria ?? "Sin categoría"}
-              </span>
-              <h3 className="mt-1 text-lg font-semibold text-foreground">{p.nombre}</h3>
-              {p.descripcion && (
-                <p className="mt-1 line-clamp-2 text-sm text-foreground/70">{p.descripcion}</p>
-              )}
-              <p className="mt-auto pt-3 text-2xl font-bold text-shocking">
-                ${Number(p.precio).toFixed(2)}
-              </p>
-            </div>
-          </article>
-        ))}
+      <div className={`lg:sticky lg:top-4 lg:self-start ${mobileCartOpen ? "block" : "hidden lg:block"}`}>
+        <CartPanel />
       </div>
+
+      <button
+        type="button"
+        onClick={() => setMobileCartOpen((v) => !v)}
+        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-shocking px-5 py-3 text-sm font-bold text-white shadow-2xl lg:hidden"
+      >
+        <ShoppingBag className="h-4 w-4" />
+        Carrito {totalItems > 0 && `(${totalItems})`}
+      </button>
+
+      <GiftModal product={giftProduct} onClose={() => setGiftProduct(null)} />
     </div>
+  );
+}
+
+export function CounterStore() {
+  return (
+    <CartProvider>
+      <CounterStoreInner />
+    </CartProvider>
   );
 }
