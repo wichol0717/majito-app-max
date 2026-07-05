@@ -31,10 +31,10 @@ function Home() {
         <div className="order-2 md:order-1">
           <h2 className="text-3xl font-bold text-shocking md:text-4xl">{"\n"}</h2>
           <p className="mt-4 text-lg leading-relaxed text-foreground/85">
-            Detrás de Majito Cake hay un sueño que nació en el corazón de Tuxpan,
+            Detrás de Majito hay un sueño que nació en el corazón de Tuxpan,
             Veracruz. Guiados por la frescura y la innovación de una joven promesa
-            de la gastronomía, convertimos del arte de la repostería en{" "}
-            una experiencia de amor y emociones a través nuestras creaciones.{" "}
+            de la gastronomía, convertimos del arte de la repostería en una
+            experiencia de amor y emociones a través nuestras creaciones.
           </p>
         </div>
         <div className="order-1 overflow-hidden rounded-3xl shadow-lg md:order-2">
