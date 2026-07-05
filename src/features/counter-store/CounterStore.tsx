@@ -22,6 +22,9 @@ const CATEGORY_ICONS: Record<string, string> = {
   Brownies: browniesIcon.url,
 };
 
+// Categorías fijas del mostrador — siempre visibles como iconos,
+// aunque todavía no haya productos cargados en esa categoría.
+const CATEGORIAS_FIJAS = ["Galletas", "Cupcakes", "Pasteles", "Brownies"];
 const CATEGORIA_INICIAL = "Galletas";
 
 function CounterStoreInner() {
@@ -50,12 +53,16 @@ function CounterStoreInner() {
   }, []);
 
   const categorias = useMemo(() => {
-    const set = new Set<string>();
+    const set = new Set<string>(CATEGORIAS_FIJAS);
     products.forEach((p) => {
       const cat = p.categoria?.toLowerCase();
       if (p.categoria && cat !== "paquetes" && cat !== "promociones") set.add(p.categoria);
     });
-    return Array.from(set).sort();
+    // Ordena: primero las fijas en su orden, luego el resto alfabético.
+    const extras = Array.from(set)
+      .filter((c) => !CATEGORIAS_FIJAS.includes(c))
+      .sort();
+    return [...CATEGORIAS_FIJAS, ...extras];
   }, [products]);
 
   useEffect(() => {
