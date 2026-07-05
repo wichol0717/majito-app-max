@@ -2,6 +2,8 @@
 // Home Majito Cake — Las 4 Puertas (Mostrador / Personalizados / Eventos / Regalos).
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import manosPostre from "@/assets/manos-postre.jpg";
+import { CounterStore } from "@/features/counter-store/CounterStore";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -45,37 +47,58 @@ const puertas = [
 function Home() {
   return (
     <main className="min-h-screen bg-crema">
+      <nav className="sticky top-0 z-30 border-b border-mocha/15 bg-crema/85 backdrop-blur-md">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-4">
+          {puertas.map((p) => (
+            <Link
+              key={p.to}
+              to={p.to}
+              className={`flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${p.color}`}
+            >
+              <span className="text-xs font-bold opacity-60">{p.letra}</span>
+              <span>{p.titulo}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
+
       <header className="mx-auto max-w-6xl px-6 pt-12 pb-8 text-center">
         <p className="text-sm uppercase tracking-[0.3em] text-mocha">Tuxpan, Veracruz</p>
         <h1 className="mt-3 text-5xl font-bold text-shocking md:text-7xl">
           Majito Cake
         </h1>
         <p className="mt-2 text-xl italic text-foreground/70">It's Max</p>
-        <p className="mx-auto mt-6 max-w-xl text-base text-foreground/80">
-          Repostería artesanal con cuatro caminos. Elige el tuyo.
-        </p>
       </header>
 
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-5 px-6 pb-16 sm:grid-cols-2">
-        {puertas.map((p) => (
-          <Link
-            key={p.to}
-            to={p.to}
-            className={`group flex min-h-[220px] flex-col justify-between rounded-3xl p-8 shadow-sm transition-transform hover:-translate-y-1 hover:shadow-lg ${p.color}`}
-          >
-            <div className="flex items-start justify-between">
-              <span className="text-6xl font-bold opacity-30">{p.letra}</span>
-              <span className="rounded-full bg-white/25 px-3 py-1 text-xs uppercase tracking-widest backdrop-blur">
-                Ruta {p.letra}
-              </span>
-            </div>
-            <div>
-              <h2 className="text-3xl font-bold">{p.titulo}</h2>
-              <p className="mt-1 text-sm opacity-90">{p.sub}</p>
-              <p className="mt-3 text-base opacity-95">{p.desc}</p>
-            </div>
+      <section className="mx-auto grid max-w-6xl items-center gap-8 px-6 pb-12 md:grid-cols-2">
+        <div className="order-2 md:order-1">
+          <h2 className="text-3xl font-bold text-shocking md:text-4xl">Nuestra historia</h2>
+          <p className="mt-4 text-lg leading-relaxed text-foreground/85">
+            Detrás de Majito Cake hay un sueño que nació en el corazón de Tuxpan,
+            Veracruz. Guiados por la frescura y la innovación de una joven promesa
+            de la gastronomía, convertimos la inquietud de ofrecer un servicio de
+            postres superior en una realidad dulce y sofisticada.
+          </p>
+        </div>
+        <div className="order-1 overflow-hidden rounded-3xl shadow-lg md:order-2">
+          <img
+            src={manosPostre}
+            alt="Manos de repostera decorando un postre artesanal en Majito Cake"
+            width={1536}
+            height={1024}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-6 pb-16">
+        <div className="mb-6 flex items-end justify-between">
+          <h2 className="text-3xl font-bold text-shocking md:text-4xl">Nuestros productos</h2>
+          <Link to="/mostrador" className="text-sm font-semibold text-mocha underline decoration-shocking underline-offset-4">
+            Ver mostrador completo →
           </Link>
-        ))}
+        </div>
+        <CounterStore />
       </section>
 
       <footer className="border-t border-mocha/20 bg-sunset/40 py-6 text-center text-xs text-foreground/70">
