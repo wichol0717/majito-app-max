@@ -22,21 +22,42 @@ export function CartPanel() {
 
   const mensajeWhats = useMemo(() => {
     const lineas: string[] = ["*Nuevo pedido — Majito Cake*", ""];
-    items.forEach((i) => {
-      const sub = i.quantity * Number(i.product.precio);
-      const etiqueta = i.isGift ? " 🎁 REGALO" : "";
-      lineas.push(`• ${i.quantity}× ${i.product.nombre}${etiqueta} — $${sub.toFixed(2)}`);
-      if (i.isGift && i.giftMessage) {
-        lineas.push(`   Mensaje: "${i.giftMessage}"`);
+    const regularItems = items.filter((i) => !i.isGift);
+    const giftItems = items.filter((i) => i.isGift);
+
+    if (regularItems.length > 0) {
+      lineas.push("*🛍️ Compra de mostrador:*");
+      regularItems.forEach((i) => {
+        const sub = i.quantity * Number(i.product.precio);
+        lineas.push(`• ${i.quantity}× ${i.product.nombre} — $${sub.toFixed(2)}`);
+      });
+      if (entrega === "envio") {
+        lineas.push(`   📍 Enviar a: ${direccion}`);
+      } else {
+        lineas.push("   🏪 Recoger en tienda");
       }
-    });
-    lineas.push("");
+      lineas.push("");
+    }
+
+    if (giftItems.length > 0) {
+      lineas.push("*🎁 Regalos (envío individual):*");
+      giftItems.forEach((i, idx) => {
+        const sub = i.quantity * Number(i.product.precio);
+        const g = i.giftDetails;
+        lineas.push(`— Regalo #${idx + 1}: ${i.quantity}× ${i.product.nombre} — $${sub.toFixed(2)}`);
+        if (i.giftMessage) lineas.push(`   💌 Mensaje: "${i.giftMessage}"`);
+        if (g) {
+          lineas.push(`   👤 De: ${g.buyerName} (WA: ${g.buyerWhatsapp})`);
+          lineas.push(`   🎉 Para: ${g.recipientName} (WA: ${g.recipientWhatsapp})`);
+          lineas.push(`   📍 Entregar en: ${g.recipientLocation}`);
+        }
+      });
+      lineas.push("");
+    }
+
     lineas.push(`Subtotal: $${subtotal.toFixed(2)}`);
     if (entrega === "envio") {
-      lineas.push(`Envío a domicilio: $${ENVIO_COSTO.toFixed(2)}`);
-      lineas.push(`Dirección: ${direccion}`);
-    } else {
-      lineas.push("Entrega: Recoger en tienda");
+      lineas.push(`Envío mostrador: $${ENVIO_COSTO.toFixed(2)}`);
     }
     lineas.push(`*Total a transferir: $${total.toFixed(2)}*`);
     lineas.push("");
@@ -88,9 +109,16 @@ export function CartPanel() {
                   <div>
                     <p className="text-sm font-semibold text-foreground">{i.product.nombre}</p>
                     {i.isGift && (
-                      <p className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-sweet-pink">
-                        <Gift className="h-3 w-3" /> Regalo: "{i.giftMessage}"
-                      </p>
+                      <div className="mt-0.5 space-y-0.5 text-[11px] text-sweet-pink">
+                        <p className="flex items-center gap-1 font-semibold">
+                          <Gift className="h-3 w-3" /> Regalo: "{i.giftMessage}"
+                        </p>
+                        {i.giftDetails && (
+                          <p className="text-mocha">
+                            Para <strong>{i.giftDetails.recipientName}</strong> → {i.giftDetails.recipientLocation}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                   <button
