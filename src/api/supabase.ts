@@ -1,3 +1,20 @@
-// Cliente Supabase — re-exporta el cliente auto-generado por Lovable Cloud.
-export { supabase } from "@/integrations/supabase/client";
+// [Módulo: api] -> [Archivo: supabase.ts]
+// Cliente Supabase apuntando al proyecto original (donde vive el catálogo).
+// Las tablas nuevas (app_settings, event_packages, customers, etc.) deben
+// crearse en este MISMO proyecto para que todo funcione con un solo cliente.
+
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./database.types";
+
+const SUPABASE_URL =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
+  "https://jntrxjvntiwrmjzsxona.supabase.co";
+const SUPABASE_ANON_KEY =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudHJ4anZudGl3cm1qenN4b25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDc4MDYsImV4cCI6MjA5NzM4MzgwNn0.Q4IfYwFur9sOU3GPM88bOdlHNOMSygrtxdvei8ZUiQg";
+
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true },
+});
+
 export const isSupabaseConfigured = true;
