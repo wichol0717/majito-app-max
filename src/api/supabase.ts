@@ -6,11 +6,11 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
-const SUPABASE_URL =
-  (import.meta.env.VITE_SUPABASE_URL as string | undefined) ??
-  "https://jntrxjvntiwrmjzsxona.supabase.co";
+// IMPORTANTE: forzamos el proyecto ORIGINAL (donde vive el catálogo real de
+// Majito). Ignoramos VITE_SUPABASE_URL porque Lovable Cloud lo sobreescribe
+// con su propio proyecto vacío y perderíamos Galletas/Cupcakes/Pasteles/Brownies.
+const SUPABASE_URL = "https://jntrxjvntiwrmjzsxona.supabase.co";
 const SUPABASE_ANON_KEY =
-  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ??
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudHJ4anZudGl3cm1qenN4b25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4MDc4MDYsImV4cCI6MjA5NzM4MzgwNn0.Q4IfYwFur9sOU3GPM88bOdlHNOMSygrtxdvei8ZUiQg";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
