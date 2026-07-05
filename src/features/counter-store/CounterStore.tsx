@@ -9,6 +9,17 @@ import { CartProvider, type Product, useCart } from "./CartContext";
 import { ProductCard } from "./ProductCard";
 import { GiftModal } from "./GiftModal";
 import { CartPanel } from "./CartPanel";
+import galletasIcon from "@/assets/galletas.svg.asset.json";
+import cupcakeIcon from "@/assets/cupcake.svg.asset.json";
+import pastelesIcon from "@/assets/pasteles.svg.asset.json";
+import browniesIcon from "@/assets/brownies.svg.asset.json";
+
+const CATEGORY_ICONS: Record<string, string> = {
+  Galletas: galletasIcon.url,
+  Cupcakes: cupcakeIcon.url,
+  Pasteles: pastelesIcon.url,
+  Brownies: browniesIcon.url,
+};
 
 const CATEGORIA_INICIAL = "Galletas";
 
@@ -68,12 +79,15 @@ function CounterStoreInner() {
               key={c}
               type="button"
               onClick={() => setCategoria(c)}
-              className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
                 categoria === c
                   ? "bg-shocking text-white shadow"
                   : "bg-white text-mocha ring-1 ring-mocha/20 hover:bg-sunset"
               }`}
             >
+              {CATEGORY_ICONS[c] && (
+                <img src={CATEGORY_ICONS[c]} alt="" aria-hidden className="h-5 w-5" />
+              )}
               {c}
             </button>
           ))}
