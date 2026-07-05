@@ -59,7 +59,7 @@ function CounterStoreInner() {
     );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <div className="grid gap-6 md:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">
       <div>
         <div className="mb-5 flex flex-wrap gap-2">
           {categorias.map((c) => (
@@ -83,7 +83,7 @@ function CounterStoreInner() {
             No hay productos activos en esta categoría.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
             {visibles.map((p) => (
               <ProductCard key={p.id} product={p} onGiftClick={setGiftProduct} />
             ))}
@@ -91,14 +91,14 @@ function CounterStoreInner() {
         )}
       </div>
 
-      <div className={`lg:sticky lg:top-4 lg:self-start ${mobileCartOpen ? "block" : "hidden lg:block"}`}>
+      <div className={`md:sticky md:top-4 md:self-start ${mobileCartOpen ? "block" : "hidden md:block"}`}>
         <CartPanel />
       </div>
 
       <button
         type="button"
         onClick={() => setMobileCartOpen((v) => !v)}
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-shocking px-5 py-3 text-sm font-bold text-white shadow-2xl lg:hidden"
+        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-shocking px-5 py-3 text-sm font-bold text-white shadow-2xl md:hidden"
       >
         <ShoppingBag className="h-4 w-4" />
         Carrito {totalItems > 0 && `(${totalItems})`}
