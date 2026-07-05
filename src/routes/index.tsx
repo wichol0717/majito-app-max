@@ -9,41 +9,6 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const puertas = [
-  {
-    to: "/mostrador",
-    letra: "A",
-    titulo: "Mostrador",
-    sub: "Galletas y pasteles de línea",
-    desc: "Elige, paga y llévatelo hoy mismo.",
-    color: "bg-shocking text-white",
-  },
-  {
-    to: "/personalizados",
-    letra: "B",
-    titulo: "Personalizados",
-    sub: "El pastel de tus sueños",
-    desc: "Sube tu foto de referencia y aparta con el 50%.",
-    color: "bg-sweet-pink text-foreground",
-  },
-  {
-    to: "/eventos",
-    letra: "C",
-    titulo: "El Carrito de Eventos\u00a0",
-    sub: "En tu evento",
-    desc: "Aparta tu fecha en el calendario, un evento por día.",
-    color: "bg-mocha text-white",
-  },
-  {
-    to: "/regalos",
-    letra: "D",
-    titulo: "Regalos",
-    sub: "Detalles especiales",
-    desc: "Catálogo listo para sorprender.",
-    color: "bg-sunset text-foreground",
-  },
-] as const;
-
 function Home() {
   return (
     <main className="min-h-screen bg-crema">
