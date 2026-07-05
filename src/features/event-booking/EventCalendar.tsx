@@ -20,19 +20,48 @@ interface Pkg {
 }
 
 export function EventCalendar() {
+  const STORAGE_KEY = "majito.event-booking.v1";
+  type Persisted = {
+    seleccionada: string | null;
+    categoria: Cat | null;
+    personas: number | null;
+    direccion: string;
+    nombre: string;
+    whatsapp: string;
+  };
+  const initial: Persisted = (() => {
+    if (typeof window === "undefined") return {
+      seleccionada: null, categoria: null, personas: null, direccion: "", nombre: "", whatsapp: "",
+    };
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) return { seleccionada: null, categoria: null, personas: null, direccion: "", nombre: "", whatsapp: "", ...JSON.parse(raw) };
+    } catch { /* ignore */ }
+    return { seleccionada: null, categoria: null, personas: null, direccion: "", nombre: "", whatsapp: "" };
+  })();
+
   const [ocupadas, setOcupadas] = useState<Set<string>>(new Set());
-  const [seleccionada, setSeleccionada] = useState<string | null>(null);
+  const [seleccionada, setSeleccionada] = useState<string | null>(initial.seleccionada);
   const [mes, setMes] = useState(() => {
     const d = new Date();
     return { anio: d.getFullYear(), mes: d.getMonth() };
   });
   const [paquetes, setPaquetes] = useState<Pkg[]>([]);
-  const [categoria, setCategoria] = useState<Cat | null>(null);
-  const [personas, setPersonas] = useState<number | null>(null);
-  const [direccion, setDireccion] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
+  const [categoria, setCategoria] = useState<Cat | null>(initial.categoria);
+  const [personas, setPersonas] = useState<number | null>(initial.personas);
+  const [direccion, setDireccion] = useState(initial.direccion);
+  const [nombre, setNombre] = useState(initial.nombre);
+  const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
   const { settings } = useAppSettings();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        seleccionada, categoria, personas, direccion, nombre, whatsapp,
+      }));
+    } catch { /* ignore */ }
+  }, [seleccionada, categoria, personas, direccion, nombre, whatsapp]);
 
   useEffect(() => {
     supabase

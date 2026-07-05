@@ -1,11 +1,38 @@
 // [Módulo: features/custom-cakes] -> [Archivo: CustomCakeForm.tsx] -> [Acción: CREAR]
 // Ruta B: Cotizador de pastel personalizado (esqueleto v1).
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const STORAGE_KEY = "majito.custom-cake.v1";
+type FormFields = {
+  customer_name: string;
+  customer_whatsapp: string;
+  delivery_date: string;
+  flavor_chosen: string;
+  notes: string;
+};
+const EMPTY: FormFields = {
+  customer_name: "", customer_whatsapp: "", delivery_date: "", flavor_chosen: "", notes: "",
+};
 
 export function CustomCakeForm() {
   const [submitted, setSubmitted] = useState(false);
   const today = new Date().toISOString().split("T")[0];
+  const [fields, setFields] = useState<FormFields>(() => {
+    if (typeof window === "undefined") return EMPTY;
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      return raw ? { ...EMPTY, ...JSON.parse(raw) } : EMPTY;
+    } catch { return EMPTY; }
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(fields)); } catch { /* ignore */ }
+  }, [fields]);
+
+  const set = (k: keyof FormFields) => (e: { target: { value: string } }) =>
+    setFields((f) => ({ ...f, [k]: e.target.value }));
 
   if (submitted) {
     return (
@@ -27,16 +54,18 @@ export function CustomCakeForm() {
         setSubmitted(true);
       }}
     >
-      <Field label="Tu nombre" name="customer_name" required />
-      <Field label="WhatsApp" name="customer_whatsapp" required placeholder="Ej. 782 123 4567" />
+      <Field label="Tu nombre" name="customer_name" required value={fields.customer_name} onChange={set("customer_name")} />
+      <Field label="WhatsApp" name="customer_whatsapp" required placeholder="Ej. 782 123 4567" value={fields.customer_whatsapp} onChange={set("customer_whatsapp")} />
       <Field
         label="Fecha de entrega"
         name="delivery_date"
         type="date"
         min={today}
         required
+        value={fields.delivery_date}
+        onChange={set("delivery_date")}
       />
-      <Field label="Sabor" name="flavor_chosen" required />
+      <Field label="Sabor" name="flavor_chosen" required value={fields.flavor_chosen} onChange={set("flavor_chosen")} />
 
       <div>
         <label className="block text-sm font-semibold text-foreground">
@@ -56,6 +85,8 @@ export function CustomCakeForm() {
         <textarea
           name="notes"
           rows={3}
+          value={fields.notes}
+          onChange={set("notes")}
           className="mt-2 w-full rounded-xl border border-mocha/30 bg-white p-3 text-sm focus:border-shocking focus:outline-none"
         />
       </div>
@@ -77,6 +108,8 @@ function Field(props: {
   required?: boolean;
   placeholder?: string;
   min?: string;
+  value?: string;
+  onChange?: (e: { target: { value: string } }) => void;
 }) {
   return (
     <div>
