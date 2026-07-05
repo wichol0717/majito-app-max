@@ -98,8 +98,11 @@ function CounterStoreInner() {
       <button
         type="button"
         onClick={() => setMobileCartOpen((v) => !v)}
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full bg-shocking px-5 py-3 text-sm font-bold text-white shadow-2xl md:hidden"
+        className="group fixed inset-x-4 bottom-4 z-40 flex items-center justify-center gap-2 overflow-hidden rounded-full border border-orange-300/30 bg-[rgba(255,138,42,0.14)] px-6 py-4 text-sm font-bold text-orange-900 shadow-[0_10px_40px_-10px_rgba(255,138,42,0.5)] backdrop-blur-xl transition hover:bg-[rgba(255,138,42,0.22)] md:hidden"
       >
+        <span aria-hidden className="pointer-events-none absolute -left-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-400/30 blur-3xl animate-pulse" />
+        <span aria-hidden className="pointer-events-none absolute -right-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-500/20 blur-3xl animate-pulse [animation-delay:600ms]" />
+        <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-orange-200/20 to-transparent blur-md" />
         <ShoppingBag className="h-4 w-4" />
         Carrito {totalItems > 0 && `(${totalItems})`}
       </button>
