@@ -9,12 +9,21 @@ export interface CartItem {
   quantity: number;
   isGift: boolean;
   giftMessage?: string;
+  giftDetails?: GiftDetails;
+}
+
+export interface GiftDetails {
+  buyerName: string;
+  buyerWhatsapp: string;
+  recipientName: string;
+  recipientWhatsapp: string;
+  recipientLocation: string;
 }
 
 interface CartCtx {
   items: CartItem[];
   addToCart: (p: Product, qty?: number) => void;
-  addGift: (p: Product, qty: number, message: string) => void;
+  addGift: (p: Product, qty: number, message: string, details: GiftDetails) => void;
   increment: (key: string) => void;
   decrement: (key: string) => void;
   remove: (key: string) => void;
@@ -51,7 +60,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addGift = useCallback((p: Product, qty: number, message: string) => {
+  const addGift = useCallback((p: Product, qty: number, message: string, details: GiftDetails) => {
     setItems((prev) => {
       const currentSameProduct = prev
         .filter((i) => i.product.id === p.id)
@@ -67,6 +76,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           quantity: add,
           isGift: true,
           giftMessage: message,
+          giftDetails: details,
         },
       ];
     });
