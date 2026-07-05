@@ -1,24 +1,36 @@
-import { useMemo, useState } from "react";
-import { Gift, Minus, Plus, Trash2, MessageCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Gift, Minus, Plus, Trash2, MessageCircle, Cake, Flame, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useCart } from "./CartContext";
-
-const WHATSAPP_NUM = "5217831450929";
-const ENVIO_COSTO = 80;
+import { useCart, type Product } from "./CartContext";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { supabase } from "@/integrations/supabase/client";
 
 export function CartPanel() {
-  const { items, increment, decrement, remove, subtotal, totalItems, hasAnyGift, clear } =
+  const { items, increment, decrement, remove, subtotal, totalItems, hasAnyGift, clear, addToCart, setCakeMessage } =
     useCart();
+  const { settings } = useAppSettings();
+  const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
+  const WHATSAPP_NUM = String(settings.whatsapp_number);
 
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
   const [direccion, setDireccion] = useState("");
+
+  // Upsell state
+  const [velaProd, setVelaProd] = useState<Product | null>(null);
+  const [showGiftHint, setShowGiftHint] = useState(false);
+
+  useEffect(() => {
+    supabase.from("products").select("*").eq("categoria", "Velas").eq("activo", "SI").limit(1)
+      .then(({ data }) => { if (data && data[0]) setVelaProd(data[0] as Product); });
+  }, []);
 
   const costoEnvio = entrega === "envio" ? ENVIO_COSTO : 0;
   const total = subtotal + costoEnvio;
 
   const hayMostrador = items.some((i) => !i.isGift);
+  const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
   const puedeConfirmar =
     items.length > 0 &&
     (entrega === "tienda" || !hayMostrador || direccion.trim().length >= 8);
@@ -33,11 +45,14 @@ export function CartPanel() {
       regularItems.forEach((i) => {
         const sub = i.quantity * Number(i.product.precio);
         lineas.push(`• ${i.quantity}× ${i.product.nombre} — $${sub.toFixed(2)}`);
+        if (i.cakeMessage && i.cakeMessage.trim()) {
+          lineas.push(`   💌 Mensaje en pastel: "${i.cakeMessage.trim()}"`);
+        }
       });
       if (entrega === "envio") {
         lineas.push(`   📍 Enviar a: ${direccion}`);
       } else {
-        lineas.push("   🏪 Recoger en tienda");
+        lineas.push("   🏪 Recoger en local");
       }
       lineas.push("");
     }
@@ -66,7 +81,7 @@ export function CartPanel() {
     lineas.push("");
     lineas.push("¡Hola! Aquí está mi pedido. En un momento adjunto mi comprobante de pago.");
     return lineas.join("\n");
-  }, [items, subtotal, total, entrega, direccion]);
+  }, [items, subtotal, total, entrega, direccion, ENVIO_COSTO]);
 
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(mensajeWhats)}`;
 
@@ -110,6 +125,7 @@ export function CartPanel() {
             .filter((x) => x.product.id === i.product.id)
             .reduce((s, x) => s + x.quantity, 0);
           const noMasStock = totalEnCarritoProducto >= i.product.stock;
+          const esPastel = (i.product.categoria ?? "").toLowerCase() === "pasteles" && !i.isGift;
           return (
             <li key={i.key} className="flex gap-3 py-3">
               {i.product.img ? (
@@ -174,18 +190,70 @@ export function CartPanel() {
                     ${(i.quantity * Number(i.product.precio)).toFixed(2)}
                   </span>
                 </div>
+                {esPastel && (
+                  <div className="mt-2">
+                    <label className="mb-1 flex items-center gap-1 text-[11px] font-semibold text-shocking">
+                      <Cake className="h-3 w-3"/> Mensaje en el pastel (máx. 60)
+                    </label>
+                    <input
+                      value={i.cakeMessage ?? ""}
+                      maxLength={60}
+                      placeholder="Ej: Feliz cumple, Sofi"
+                      onChange={(e) => setCakeMessage(i.key, e.target.value)}
+                      className="w-full rounded border border-mocha/20 px-2 py-1 text-xs outline-none focus:border-shocking"
+                    />
+                  </div>
+                )}
               </div>
             </li>
           );
         })}
       </ul>
 
-      {!hasAnyGift && (
-        <div className="rounded-xl border border-sweet-pink/40 bg-sweet-pink/10 p-3 text-xs text-foreground">
-          🎁 <strong>¿Quieres convertir tu pedido en un detalle inolvidable?</strong> Añade un
-          mensaje de regalo tocando el ícono 🎁 en cualquier producto.
+      {/* ===== UPSELLS ===== */}
+      <div className="rounded-2xl border border-sweet-pink/40 bg-sweet-pink/10 p-3">
+        <p className="mb-2 flex items-center gap-1 text-sm font-bold text-shocking">
+          <Sparkles className="h-4 w-4"/> ¿Le agregas un detalle especial?
+        </p>
+        <div className="grid gap-2">
+          {velaProd && (
+            <button
+              type="button"
+              onClick={() => addToCart(velaProd, 1)}
+              className="flex items-center justify-between rounded-xl bg-white p-2 text-left text-xs shadow-sm hover:shadow"
+            >
+              <span className="flex items-center gap-2">
+                <Flame className="h-4 w-4 text-sunset"/>
+                <span><strong>{velaProd.nombre}</strong> — perfectas para tu pastel</span>
+              </span>
+              <span className="rounded-full bg-shocking px-2 py-1 font-bold text-white">+ ${Number(velaProd.precio).toFixed(0)}</span>
+            </button>
+          )}
+          {!hasAnyGift && (
+            <button
+              type="button"
+              onClick={() => setShowGiftHint((v) => !v)}
+              className="flex items-center justify-between rounded-xl bg-white p-2 text-left text-xs shadow-sm hover:shadow"
+            >
+              <span className="flex items-center gap-2">
+                <Gift className="h-4 w-4 text-sweet-pink"/>
+                <span><strong>Enviar como regalo</strong> — con mensaje personalizado</span>
+              </span>
+              <span className="text-sweet-pink">›</span>
+            </button>
+          )}
+          {showGiftHint && (
+            <p className="rounded bg-white/60 p-2 text-[11px] text-mocha">
+              Toca el ícono 🎁 sobre cualquier producto del mostrador y llena los datos del destinatario. El mensaje viaja con el pedido por WhatsApp.
+            </p>
+          )}
+          {hayPastel && (
+            <p className="rounded bg-white/60 p-2 text-[11px] text-mocha">
+              💌 Escribe el mensaje del pastel en cada producto de la lista.
+            </p>
+          )}
         </div>
-      )}
+      </div>
 
       <div className="border-t border-mocha/10 pt-3">
         <p className="mb-2 text-sm font-semibold text-foreground">Método de entrega</p>
@@ -233,9 +301,9 @@ export function CartPanel() {
 
       <div className="rounded-xl bg-crema p-3 text-xs text-foreground">
         <p className="mb-1 font-semibold text-shocking">Datos para transferencia</p>
-        <p>Banco: <strong>BBVA BANCOMER</strong></p>
-        <p>Cuenta: <strong>4152 3144 9119 3861</strong></p>
-        <p>Titular: <strong>Luis Ricardo Villalobos Fortun</strong></p>
+        <p>Banco: <strong>{settings.bank_name}</strong></p>
+        <p>Cuenta: <strong>{settings.bank_account}</strong></p>
+        <p>Titular: <strong>{settings.bank_holder}</strong></p>
       </div>
 
       <div className="space-y-1 border-t border-mocha/10 pt-3 text-sm">
