@@ -4,7 +4,20 @@
 //   - Anti-empalmes (1 evento por día)
 
 import { useEffect, useMemo, useState } from "react";
-import { supabase, isSupabaseConfigured } from "@/api/supabase";
+import { supabase } from "@/api/supabase";
+import { useAppSettings } from "@/hooks/useAppSettings";
+
+type Cat = "reposteria" | "snacks_frios";
+interface Pkg {
+  id: number;
+  categoria: Cat;
+  personas: number;
+  nombre: string;
+  descripcion: string | null;
+  precio: number | null;
+  incluye: any;
+  requiere_cotizacion: boolean;
+}
 
 export function EventCalendar() {
   const [ocupadas, setOcupadas] = useState<Set<string>>(new Set());
@@ -13,9 +26,16 @@ export function EventCalendar() {
     const d = new Date();
     return { anio: d.getFullYear(), mes: d.getMonth() };
   });
+  const [paquetes, setPaquetes] = useState<Pkg[]>([]);
+  const [categoria, setCategoria] = useState<Cat | null>(null);
+  const [personas, setPersonas] = useState<number | null>(null);
+  const [entrega, setEntrega] = useState<"local" | "envio">("local");
+  const [direccion, setDireccion] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const { settings } = useAppSettings();
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
     supabase
       .from("event_bookings")
       .select("event_date, status")
@@ -23,14 +43,98 @@ export function EventCalendar() {
       .then(({ data }) => {
         setOcupadas(new Set((data ?? []).map((r) => r.event_date)));
       });
+    supabase
+      .from("event_packages")
+      .select("*")
+      .eq("activo", true)
+      .then(({ data }) => setPaquetes((data ?? []) as Pkg[]));
   }, []);
 
   const dias = useMemo(() => construirMes(mes.anio, mes.mes), [mes]);
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 
+  const pkg = useMemo(() =>
+    paquetes.find((p) => p.categoria === categoria && p.personas === personas) ?? null,
+  [paquetes, categoria, personas]);
+
+  const puedeReservar =
+    seleccionada && pkg && nombre.trim().length >= 2 && whatsapp.trim().length >= 8 &&
+    (entrega === "local" || direccion.trim().length >= 8);
+
+  const mensajeWA = useMemo(() => {
+    if (!pkg || !seleccionada) return "";
+    const l: string[] = [
+      "*Reserva de evento — Majito Cake*",
+      "",
+      `📅 Fecha: ${formatearLargo(seleccionada)}`,
+      `👥 Personas: ${pkg.personas === 200 ? "200+" : pkg.personas}`,
+      `🎯 Categoría: ${pkg.categoria === "reposteria" ? "Repostería" : "Snacks fríos"}`,
+      `📦 Paquete: ${pkg.nombre}`,
+    ];
+    if (pkg.descripcion) l.push(`   ${pkg.descripcion}`);
+    if (pkg.requiere_cotizacion) l.push("   💬 Requiere cotización personalizada");
+    else if (pkg.precio) l.push(`💰 Precio: $${Number(pkg.precio).toFixed(2)} (anticipo 50%: $${(Number(pkg.precio)/2).toFixed(2)})`);
+    l.push("");
+    l.push(entrega === "local" ? "🏪 Recoger en local" : `🚚 Envío a: ${direccion}`);
+    l.push(`👤 Cliente: ${nombre} (WA: ${whatsapp})`);
+    return l.join("\n");
+  }, [pkg, seleccionada, entrega, direccion, nombre, whatsapp]);
+
+  const whatsappUrl = pkg && seleccionada
+    ? `https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(mensajeWA)}`
+    : undefined;
+
   return (
     <div>
+      {/* Paso 1: Categoría */}
+      <div className="mb-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-mocha">1 · Categoría</p>
+        <div className="grid grid-cols-2 gap-2">
+          {(["reposteria","snacks_frios"] as Cat[]).map((c) => (
+            <button key={c} type="button" onClick={() => { setCategoria(c); setPersonas(null); }}
+              className={`rounded-xl border-2 p-3 text-left text-sm transition ${
+                categoria === c ? "border-shocking bg-shocking/10" : "border-mocha/20 bg-white hover:border-shocking/40"
+              }`}>
+              <p className="font-bold text-foreground">{c === "reposteria" ? "🧁 Repostería" : "🥪 Snacks fríos"}</p>
+              <p className="text-xs text-mocha">{c === "reposteria" ? "50% brownies + 50% galletas" : "50% paletas + 50% Boings"}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Paso 2: Tamaño */}
+      {categoria && (
+        <div className="mb-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-mocha">2 · Personas</p>
+          <div className="grid grid-cols-4 gap-2">
+            {[50,100,150,200].map((n) => {
+              const p = paquetes.find((pk) => pk.categoria === categoria && pk.personas === n);
+              return (
+                <button key={n} type="button" onClick={() => setPersonas(n)} disabled={!p}
+                  className={`rounded-xl border-2 p-2 text-center text-sm font-bold transition ${
+                    personas === n ? "border-shocking bg-shocking/10 text-shocking" : "border-mocha/20 bg-white hover:border-shocking/40"
+                  } disabled:opacity-40`}>
+                  {n === 200 ? "200+" : n}
+                  {p?.precio && <div className="text-[10px] font-normal text-mocha">${Number(p.precio).toFixed(0)}</div>}
+                  {p?.requiere_cotizacion && <div className="text-[10px] font-normal text-mocha">Cotizar</div>}
+                </button>
+              );
+            })}
+          </div>
+          {pkg && (
+            <div className="mt-2 rounded-lg bg-white p-3 text-xs ring-1 ring-mocha/10">
+              <p className="font-bold text-foreground">{pkg.nombre}</p>
+              {pkg.descripcion && <p className="text-mocha">{pkg.descripcion}</p>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Paso 3: Calendario */}
+      {categoria && personas && (
+        <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-mocha">3 · Fecha del evento</p>
+      )}
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
@@ -86,16 +190,40 @@ export function EventCalendar() {
         })}
       </div>
 
-      {seleccionada && (
-        <div className="mt-6 rounded-2xl bg-white p-5 ring-1 ring-mocha/20">
+      {seleccionada && pkg && (
+        <div className="mt-6 space-y-3 rounded-2xl bg-white p-5 ring-1 ring-mocha/20">
           <p className="text-sm text-mocha">Fecha elegida:</p>
-          <p className="text-2xl font-bold text-shocking">{formatearLargo(seleccionada)}</p>
-          <button className="mt-4 w-full rounded-full bg-shocking px-6 py-3 font-bold text-white">
-            Apartar con anticipo del 50%
-          </button>
-          <p className="mt-2 text-xs text-mocha">
-            El día desaparece del calendario por 24 h mientras subes tu comprobante.
-          </p>
+          <p className="text-xl font-bold text-shocking">{formatearLargo(seleccionada)}</p>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={nombre} onChange={(e)=>setNombre(e.target.value)} placeholder="Tu nombre"
+              className="rounded border border-mocha/20 px-3 py-2 text-sm"/>
+            <input value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)} placeholder="WhatsApp (521…)"
+              className="rounded border border-mocha/20 px-3 py-2 text-sm"/>
+          </div>
+
+          <div>
+            <p className="mb-1 text-xs font-semibold text-foreground">Modalidad de entrega</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={()=>setEntrega("local")}
+                className={`rounded-xl border-2 p-2 text-xs ${entrega==="local"?"border-shocking bg-shocking/10":"border-mocha/20"}`}>🏪 Recoger en local</button>
+              <button type="button" onClick={()=>setEntrega("envio")}
+                className={`rounded-xl border-2 p-2 text-xs ${entrega==="envio"?"border-shocking bg-shocking/10":"border-mocha/20"}`}>🚚 Envío al evento</button>
+            </div>
+            {entrega === "envio" && (
+              <textarea value={direccion} onChange={(e)=>setDireccion(e.target.value)} rows={2}
+                placeholder="Dirección del evento" className="mt-2 w-full rounded border border-mocha/20 px-3 py-2 text-sm"/>
+            )}
+          </div>
+
+          <a href={puedeReservar ? whatsappUrl : undefined}
+            target="_blank" rel="noreferrer"
+            aria-disabled={!puedeReservar}
+            onClick={(e)=>{ if (!puedeReservar) e.preventDefault(); }}
+            className={`block w-full rounded-full px-6 py-3 text-center font-bold text-white ${puedeReservar?"bg-shocking hover:bg-shocking/90":"cursor-not-allowed bg-mocha/40"}`}>
+            {pkg.requiere_cotizacion ? "Pedir cotización por WhatsApp" : "Apartar con anticipo del 50% por WhatsApp"}
+          </a>
+          <p className="text-xs text-mocha">El día se aparta por 24 h mientras confirmas por WhatsApp.</p>
         </div>
       )}
     </div>
