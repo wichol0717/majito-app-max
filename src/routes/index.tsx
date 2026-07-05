@@ -14,7 +14,7 @@ function Home() {
   return (
     <main className="min-h-screen bg-crema">
       <header className="mx-auto max-w-6xl px-6 pt-12 pb-8 text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-mocha">Tuxpan, Veracruz</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-mocha">{"\n"}</p>
         <h1 className="mt-3 flex justify-center">
           <img
             src={tituloMajito.url}
@@ -24,7 +24,7 @@ function Home() {
             className="h-auto w-full max-w-2xl"
           />
         </h1>
-        <p className="mt-2 text-xl italic text-foreground/70">It's Max</p>
+        <p className="mt-2 text-xl italic text-foreground/70">{"\n"}</p>
       </header>
 
       <section className="mx-auto grid max-w-6xl items-center gap-8 px-6 pb-12 md:grid-cols-2">
