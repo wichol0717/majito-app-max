@@ -3,6 +3,7 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import manosPostre from "@/assets/manos-postre.jpg";
+import tituloMajito from "@/assets/titulo_majito.svg.asset.json";
 import { CounterStore } from "@/features/counter-store/CounterStore";
 
 export const Route = createFileRoute("/")({
@@ -14,8 +15,14 @@ function Home() {
     <main className="min-h-screen bg-crema">
       <header className="mx-auto max-w-6xl px-6 pt-12 pb-8 text-center">
         <p className="text-sm uppercase tracking-[0.3em] text-mocha">Tuxpan, Veracruz</p>
-        <h1 className="mt-3 text-5xl font-bold text-shocking md:text-7xl">
-          Majito Cake
+        <h1 className="mt-3 flex justify-center">
+          <img
+            src={tituloMajito.url}
+            alt="Majito Cake"
+            width={908}
+            height={381}
+            className="h-auto w-full max-w-2xl"
+          />
         </h1>
         <p className="mt-2 text-xl italic text-foreground/70">It's Max</p>
       </header>
