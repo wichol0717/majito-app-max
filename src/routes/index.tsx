@@ -72,12 +72,12 @@ function Home() {
 
       <section className="mx-auto grid max-w-6xl items-center gap-8 px-6 pb-12 md:grid-cols-2">
         <div className="order-2 md:order-1">
-          <h2 className="text-3xl font-bold text-shocking md:text-4xl">Nuestra historia</h2>
+          <h2 className="text-3xl font-bold text-shocking md:text-4xl">{"\n"}</h2>
           <p className="mt-4 text-lg leading-relaxed text-foreground/85">
             Detrás de Majito Cake hay un sueño que nació en el corazón de Tuxpan,
             Veracruz. Guiados por la frescura y la innovación de una joven promesa
-            de la gastronomía, convertimos la inquietud de ofrecer un servicio de
-            postres superior en una realidad dulce y sofisticada.
+            de la gastronomía, convertimos del arte de la repostería en{" "}
+            una experiencia de amor y emociones a través nuestras creaciones.{" "}
           </p>
         </div>
         <div className="order-1 overflow-hidden rounded-3xl shadow-lg md:order-2">
