@@ -79,16 +79,19 @@ function CounterStoreInner() {
               key={c}
               type="button"
               onClick={() => setCategoria(c)}
-              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              aria-label={c}
+              title={c}
+              className={`inline-flex items-center justify-center rounded-full p-1 transition ${
                 categoria === c
-                  ? "bg-shocking text-white shadow"
-                  : "bg-white text-mocha ring-1 ring-mocha/20 hover:bg-sunset"
+                  ? "ring-2 ring-shocking scale-105"
+                  : "opacity-70 hover:opacity-100"
               }`}
             >
-              {CATEGORY_ICONS[c] && (
-                <img src={CATEGORY_ICONS[c]} alt="" aria-hidden className="h-5 w-5" />
+              {CATEGORY_ICONS[c] ? (
+                <img src={CATEGORY_ICONS[c]} alt={c} className="h-16 w-16" />
+              ) : (
+                <span className="px-3 py-2 text-sm font-semibold text-mocha">{c}</span>
               )}
-              {c}
             </button>
           ))}
         </div>
