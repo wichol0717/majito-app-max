@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/api/supabase";
 
 export interface AppSettings {
   whatsapp_number: string;

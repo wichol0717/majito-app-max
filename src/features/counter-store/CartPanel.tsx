@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart, type Product } from "./CartContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/api/supabase";
 
 export function CartPanel() {
   const { items, increment, decrement, remove, subtotal, totalItems, hasAnyGift, clear, addToCart, setCakeMessage } =
