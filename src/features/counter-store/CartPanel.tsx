@@ -17,8 +17,10 @@ export function CartPanel() {
   const costoEnvio = entrega === "envio" ? ENVIO_COSTO : 0;
   const total = subtotal + costoEnvio;
 
+  const hayMostrador = items.some((i) => !i.isGift);
   const puedeConfirmar =
-    items.length > 0 && (entrega === "tienda" || direccion.trim().length >= 8);
+    items.length > 0 &&
+    (entrega === "tienda" || !hayMostrador || direccion.trim().length >= 8);
 
   const mensajeWhats = useMemo(() => {
     const lineas: string[] = ["*Nuevo pedido — Majito Cake*", ""];
