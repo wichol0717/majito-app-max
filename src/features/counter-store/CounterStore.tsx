@@ -56,9 +56,16 @@ function CounterStoreInner() {
     const set = new Set<string>(CATEGORIAS_FIJAS);
     products.forEach((p) => {
       const cat = p.categoria?.toLowerCase();
-      if (p.categoria && cat !== "paquetes" && cat !== "promociones") set.add(p.categoria);
+      // Velas se maneja como upsell (regalo/complemento), no como pestaña.
+      if (
+        p.categoria &&
+        cat !== "paquetes" &&
+        cat !== "promociones" &&
+        cat !== "velas"
+      ) {
+        set.add(p.categoria);
+      }
     });
-    // Ordena: primero las fijas en su orden, luego el resto alfabético.
     const extras = Array.from(set)
       .filter((c) => !CATEGORIAS_FIJAS.includes(c))
       .sort();
