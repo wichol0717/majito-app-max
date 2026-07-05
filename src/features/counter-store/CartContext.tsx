@@ -10,6 +10,7 @@ export interface CartItem {
   isGift: boolean;
   giftMessage?: string;
   giftDetails?: GiftDetails;
+  cakeMessage?: string;
 }
 
 export interface GiftDetails {
@@ -28,6 +29,7 @@ interface CartCtx {
   decrement: (key: string) => void;
   remove: (key: string) => void;
   clear: () => void;
+  setCakeMessage: (key: string, message: string) => void;
   quantityOf: (productId: number) => number;
   totalItems: number;
   subtotal: number;
@@ -108,6 +110,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clear = useCallback(() => setItems([]), []);
 
+  const setCakeMessage = useCallback((key: string, message: string) => {
+    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, cakeMessage: message } : i)));
+  }, []);
+
   const value = useMemo<CartCtx>(() => {
     const totalItems = items.reduce((s, i) => s + i.quantity, 0);
     const subtotal = items.reduce((s, i) => s + i.quantity * Number(i.product.precio), 0);
@@ -122,12 +128,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       decrement,
       remove,
       clear,
+      setCakeMessage,
       quantityOf,
       totalItems,
       subtotal,
       hasAnyGift,
     };
-  }, [items, addToCart, addGift, increment, decrement, remove, clear]);
+  }, [items, addToCart, addGift, increment, decrement, remove, clear, setCakeMessage]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -14,7 +14,13 @@ import { Route as PersonalizadosRouteImport } from './routes/personalizados'
 import { Route as MostradorRouteImport } from './routes/mostrador'
 import { Route as EventosRouteImport } from './routes/eventos'
 import { Route as CocinaRouteImport } from './routes/cocina'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminPaquetesRouteImport } from './routes/admin.paquetes'
+import { Route as AdminInventarioRouteImport } from './routes/admin.inventario'
+import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
+import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
 
 const RegalosRoute = RegalosRouteImport.update({
   id: '/regalos',
@@ -41,19 +47,55 @@ const CocinaRoute = CocinaRouteImport.update({
   path: '/cocina',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPaquetesRoute = AdminPaquetesRouteImport.update({
+  id: '/paquetes',
+  path: '/paquetes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminInventarioRoute = AdminInventarioRouteImport.update({
+  id: '/inventario',
+  path: '/inventario',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminConfiguracionRoute = AdminConfiguracionRouteImport.update({
+  id: '/configuracion',
+  path: '/configuracion',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminClientesRoute = AdminClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/cocina': typeof CocinaRoute
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
   '/personalizados': typeof PersonalizadosRoute
   '/regalos': typeof RegalosRoute
+  '/admin/clientes': typeof AdminClientesRoute
+  '/admin/configuracion': typeof AdminConfiguracionRoute
+  '/admin/inventario': typeof AdminInventarioRoute
+  '/admin/paquetes': typeof AdminPaquetesRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,25 +104,42 @@ export interface FileRoutesByTo {
   '/mostrador': typeof MostradorRoute
   '/personalizados': typeof PersonalizadosRoute
   '/regalos': typeof RegalosRoute
+  '/admin/clientes': typeof AdminClientesRoute
+  '/admin/configuracion': typeof AdminConfiguracionRoute
+  '/admin/inventario': typeof AdminInventarioRoute
+  '/admin/paquetes': typeof AdminPaquetesRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/cocina': typeof CocinaRoute
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
   '/personalizados': typeof PersonalizadosRoute
   '/regalos': typeof RegalosRoute
+  '/admin/clientes': typeof AdminClientesRoute
+  '/admin/configuracion': typeof AdminConfiguracionRoute
+  '/admin/inventario': typeof AdminInventarioRoute
+  '/admin/paquetes': typeof AdminPaquetesRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/cocina'
     | '/eventos'
     | '/mostrador'
     | '/personalizados'
     | '/regalos'
+    | '/admin/clientes'
+    | '/admin/configuracion'
+    | '/admin/inventario'
+    | '/admin/paquetes'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,18 +148,30 @@ export interface FileRouteTypes {
     | '/mostrador'
     | '/personalizados'
     | '/regalos'
+    | '/admin/clientes'
+    | '/admin/configuracion'
+    | '/admin/inventario'
+    | '/admin/paquetes'
+    | '/admin'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/cocina'
     | '/eventos'
     | '/mostrador'
     | '/personalizados'
     | '/regalos'
+    | '/admin/clientes'
+    | '/admin/configuracion'
+    | '/admin/inventario'
+    | '/admin/paquetes'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CocinaRoute: typeof CocinaRoute
   EventosRoute: typeof EventosRoute
   MostradorRoute: typeof MostradorRoute
@@ -145,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CocinaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -152,11 +230,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/paquetes': {
+      id: '/admin/paquetes'
+      path: '/paquetes'
+      fullPath: '/admin/paquetes'
+      preLoaderRoute: typeof AdminPaquetesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/inventario': {
+      id: '/admin/inventario'
+      path: '/inventario'
+      fullPath: '/admin/inventario'
+      preLoaderRoute: typeof AdminInventarioRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/configuracion': {
+      id: '/admin/configuracion'
+      path: '/configuracion'
+      fullPath: '/admin/configuracion'
+      preLoaderRoute: typeof AdminConfiguracionRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/clientes': {
+      id: '/admin/clientes'
+      path: '/clientes'
+      fullPath: '/admin/clientes'
+      preLoaderRoute: typeof AdminClientesRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminClientesRoute: typeof AdminClientesRoute
+  AdminConfiguracionRoute: typeof AdminConfiguracionRoute
+  AdminInventarioRoute: typeof AdminInventarioRoute
+  AdminPaquetesRoute: typeof AdminPaquetesRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminClientesRoute: AdminClientesRoute,
+  AdminConfiguracionRoute: AdminConfiguracionRoute,
+  AdminInventarioRoute: AdminInventarioRoute,
+  AdminPaquetesRoute: AdminPaquetesRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   CocinaRoute: CocinaRoute,
   EventosRoute: EventosRoute,
   MostradorRoute: MostradorRoute,
