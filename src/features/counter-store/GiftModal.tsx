@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Gift, Minus, Plus } from "lucide-react";
 import { useCart, type Product } from "./CartContext";
 
@@ -20,6 +23,11 @@ export function GiftModal({ product, onClose }: Props) {
   const { addGift, quantityOf } = useCart();
   const [qty, setQty] = useState(1);
   const [mensaje, setMensaje] = useState(MENSAJES[0]);
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientWhatsapp, setRecipientWhatsapp] = useState("");
+  const [recipientLocation, setRecipientLocation] = useState("");
 
   if (!product) return null;
 
@@ -28,15 +36,34 @@ export function GiftModal({ product, onClose }: Props) {
   const canPlus = qty < disponible;
   const canMinus = qty > 1;
 
+  const formValido =
+    buyerName.trim().length >= 2 &&
+    buyerWhatsapp.trim().length >= 8 &&
+    recipientName.trim().length >= 2 &&
+    recipientWhatsapp.trim().length >= 8 &&
+    recipientLocation.trim().length >= 5;
+
   const confirmar = () => {
-    addGift(product, qty, mensaje);
+    if (!formValido) return;
+    addGift(product, qty, mensaje, {
+      buyerName: buyerName.trim(),
+      buyerWhatsapp: buyerWhatsapp.trim(),
+      recipientName: recipientName.trim(),
+      recipientWhatsapp: recipientWhatsapp.trim(),
+      recipientLocation: recipientLocation.trim(),
+    });
     setQty(1);
+    setBuyerName("");
+    setBuyerWhatsapp("");
+    setRecipientName("");
+    setRecipientWhatsapp("");
+    setRecipientLocation("");
     onClose();
   };
 
   return (
     <Dialog open={!!product} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="bg-crema">
+      <DialogContent className="max-h-[90vh] overflow-y-auto bg-crema">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-shocking">
             <Gift className="h-5 w-5" /> Regalar: {product.nombre}
@@ -106,11 +133,43 @@ export function GiftModal({ product, onClose }: Props) {
           </div>
         </div>
 
+        <div className="space-y-3 rounded-xl border border-shocking/20 bg-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-shocking">Datos del comprador</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="buyerName" className="text-xs">Tu nombre *</Label>
+              <Input id="buyerName" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} maxLength={80} placeholder="Nombre completo" />
+            </div>
+            <div>
+              <Label htmlFor="buyerWhatsapp" className="text-xs">Tu WhatsApp *</Label>
+              <Input id="buyerWhatsapp" value={buyerWhatsapp} onChange={(e) => setBuyerWhatsapp(e.target.value)} maxLength={20} placeholder="Ej. 7831234567" inputMode="tel" />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-sweet-pink/40 bg-sweet-pink/5 p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-sweet-pink">Datos del festejado / a quién enviar</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="recipientName" className="text-xs">Nombre del festejado *</Label>
+              <Input id="recipientName" value={recipientName} onChange={(e) => setRecipientName(e.target.value)} maxLength={80} placeholder="A quién se lo regalas" />
+            </div>
+            <div>
+              <Label htmlFor="recipientWhatsapp" className="text-xs">WhatsApp del festejado *</Label>
+              <Input id="recipientWhatsapp" value={recipientWhatsapp} onChange={(e) => setRecipientWhatsapp(e.target.value)} maxLength={20} placeholder="Ej. 7831112233" inputMode="tel" />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="recipientLocation" className="text-xs">Ubicación / dirección de entrega *</Label>
+            <Textarea id="recipientLocation" value={recipientLocation} onChange={(e) => setRecipientLocation(e.target.value)} rows={2} maxLength={300} placeholder="Calle, número, colonia, referencias, ciudad" />
+          </div>
+        </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={confirmar} disabled={disponible === 0}>
+          <Button onClick={confirmar} disabled={disponible === 0 || !formValido}>
             <Gift className="mr-1 h-4 w-4" /> Agregar regalo al carrito
           </Button>
         </DialogFooter>
