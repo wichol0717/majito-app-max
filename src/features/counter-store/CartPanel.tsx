@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Gift, Minus, Plus, Trash2, MessageCircle } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "./CartContext";
@@ -80,6 +81,22 @@ export function CartPanel() {
 
   return (
     <aside className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-lg ring-1 ring-mocha/10">
+      <div className="grid grid-cols-2 gap-2">
+        <Link
+          to="/personalizados"
+          className="flex items-center justify-center gap-2 rounded-full bg-sweet-pink px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <span className="text-[10px] font-bold opacity-60">B</span>
+          Personalizados
+        </Link>
+        <Link
+          to="/eventos"
+          className="flex items-center justify-center gap-2 rounded-full bg-mocha px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <span className="text-[10px] font-bold opacity-60">C</span>
+          Carrito de Eventos
+        </Link>
+      </div>
       <header className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-shocking">Tu carrito</h2>
         <span className="rounded-full bg-sunset px-3 py-1 text-xs font-semibold text-mocha">

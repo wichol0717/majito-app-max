@@ -9,59 +9,9 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const puertas = [
-  {
-    to: "/mostrador",
-    letra: "A",
-    titulo: "Mostrador",
-    sub: "Galletas y pasteles de línea",
-    desc: "Elige, paga y llévatelo hoy mismo.",
-    color: "bg-shocking text-white",
-  },
-  {
-    to: "/personalizados",
-    letra: "B",
-    titulo: "Personalizados",
-    sub: "El pastel de tus sueños",
-    desc: "Sube tu foto de referencia y aparta con el 50%.",
-    color: "bg-sweet-pink text-foreground",
-  },
-  {
-    to: "/eventos",
-    letra: "C",
-    titulo: "El Carrito de Eventos\u00a0",
-    sub: "En tu evento",
-    desc: "Aparta tu fecha en el calendario, un evento por día.",
-    color: "bg-mocha text-white",
-  },
-  {
-    to: "/regalos",
-    letra: "D",
-    titulo: "Regalos",
-    sub: "Detalles especiales",
-    desc: "Catálogo listo para sorprender.",
-    color: "bg-sunset text-foreground",
-  },
-] as const;
-
 function Home() {
   return (
     <main className="min-h-screen bg-crema">
-      <nav className="sticky top-0 z-30 border-b border-mocha/15 bg-crema/85 backdrop-blur-md">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-2 px-4 py-3 sm:grid-cols-4">
-          {puertas.map((p) => (
-            <Link
-              key={p.to}
-              to={p.to}
-              className={`flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${p.color}`}
-            >
-              <span className="text-xs font-bold opacity-60">{p.letra}</span>
-              <span>{p.titulo}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
-
       <header className="mx-auto max-w-6xl px-6 pt-12 pb-8 text-center">
         <p className="text-sm uppercase tracking-[0.3em] text-mocha">Tuxpan, Veracruz</p>
         <h1 className="mt-3 text-5xl font-bold text-shocking md:text-7xl">
