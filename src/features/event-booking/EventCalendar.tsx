@@ -29,7 +29,6 @@ export function EventCalendar() {
   const [paquetes, setPaquetes] = useState<Pkg[]>([]);
   const [categoria, setCategoria] = useState<Cat | null>(null);
   const [personas, setPersonas] = useState<number | null>(null);
-  const [entrega, setEntrega] = useState<"local" | "envio">("local");
   const [direccion, setDireccion] = useState("");
   const [nombre, setNombre] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -60,7 +59,7 @@ export function EventCalendar() {
 
   const puedeReservar =
     seleccionada && pkg && nombre.trim().length >= 2 && whatsapp.trim().length >= 8 &&
-    (entrega === "local" || direccion.trim().length >= 8);
+    direccion.trim().length >= 8;
 
   const mensajeWA = useMemo(() => {
     if (!pkg || !seleccionada) return "";
@@ -76,10 +75,10 @@ export function EventCalendar() {
     if (pkg.requiere_cotizacion) l.push("   💬 Requiere cotización personalizada");
     else if (pkg.precio) l.push(`💰 Precio: $${Number(pkg.precio).toFixed(2)} (anticipo 50%: $${(Number(pkg.precio)/2).toFixed(2)})`);
     l.push("");
-    l.push(entrega === "local" ? "🏪 Recoger en local" : `🚚 Envío a: ${direccion}`);
+    l.push(`📍 Dirección del evento: ${direccion}`);
     l.push(`👤 Cliente: ${nombre} (WA: ${whatsapp})`);
     return l.join("\n");
-  }, [pkg, seleccionada, entrega, direccion, nombre, whatsapp]);
+  }, [pkg, seleccionada, direccion, nombre, whatsapp]);
 
   const whatsappUrl = pkg && seleccionada
     ? `https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(mensajeWA)}`
@@ -203,17 +202,10 @@ export function EventCalendar() {
           </div>
 
           <div>
-            <p className="mb-1 text-xs font-semibold text-foreground">Modalidad de entrega</p>
-            <div className="grid grid-cols-2 gap-2">
-              <button type="button" onClick={()=>setEntrega("local")}
-                className={`rounded-xl border-2 p-2 text-xs ${entrega==="local"?"border-shocking bg-shocking/10":"border-mocha/20"}`}>🏪 Recoger en local</button>
-              <button type="button" onClick={()=>setEntrega("envio")}
-                className={`rounded-xl border-2 p-2 text-xs ${entrega==="envio"?"border-shocking bg-shocking/10":"border-mocha/20"}`}>🚚 Envío al evento</button>
-            </div>
-            {entrega === "envio" && (
-              <textarea value={direccion} onChange={(e)=>setDireccion(e.target.value)} rows={2}
-                placeholder="Dirección del evento" className="mt-2 w-full rounded border border-mocha/20 px-3 py-2 text-sm"/>
-            )}
+            <p className="mb-1 text-xs font-semibold text-foreground">Dirección del evento *</p>
+            <textarea value={direccion} onChange={(e)=>setDireccion(e.target.value)} rows={2}
+              placeholder="Calle, número, colonia, referencia del lugar del evento…"
+              className="w-full rounded border border-mocha/20 px-3 py-2 text-sm"/>
           </div>
 
           <a href={puedeReservar ? whatsappUrl : undefined}
