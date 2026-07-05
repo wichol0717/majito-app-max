@@ -13,6 +13,7 @@ import galletasIcon from "@/assets/galletas.svg.asset.json";
 import cupcakeIcon from "@/assets/cupcake.svg.asset.json";
 import pastelesIcon from "@/assets/pasteles.svg.asset.json";
 import browniesIcon from "@/assets/brownies.svg.asset.json";
+import carritoEventosIcon from "@/assets/carrito_de_eventos.png.asset.json";
 
 const CATEGORY_ICONS: Record<string, string> = {
   Galletas: galletasIcon.url,
@@ -50,7 +51,9 @@ function CounterStoreInner() {
 
   const categorias = useMemo(() => {
     const set = new Set<string>();
-    products.forEach((p) => p.categoria && set.add(p.categoria));
+    products.forEach((p) => {
+      if (p.categoria && p.categoria.toLowerCase() !== "paquetes") set.add(p.categoria);
+    });
     return Array.from(set).sort();
   }, [products]);
 
@@ -94,6 +97,14 @@ function CounterStoreInner() {
               )}
             </button>
           ))}
+          <Link
+            to="/eventos"
+            aria-label="Carrito de eventos"
+            title="Carrito de eventos"
+            className="inline-flex items-center justify-center rounded-full p-1 opacity-70 transition hover:opacity-100"
+          >
+            <img src={carritoEventosIcon.url} alt="Carrito de eventos" className="h-16 w-16" />
+          </Link>
         </div>
 
         {visibles.length === 0 ? (
