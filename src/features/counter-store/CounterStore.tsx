@@ -2,7 +2,8 @@
 // Ruta A: Catálogo de mostrador con stock vivo (esqueleto v1).
 
 import { useEffect, useMemo, useState } from "react";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Cake, PartyPopper } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/api/supabase";
 import { CartProvider, type Product, useCart } from "./CartContext";
 import { ProductCard } from "./ProductCard";
@@ -95,17 +96,35 @@ function CounterStoreInner() {
         <CartPanel />
       </div>
 
-      <button
-        type="button"
-        onClick={() => setMobileCartOpen((v) => !v)}
-        className="group fixed inset-x-4 bottom-4 z-40 flex items-center justify-center gap-2 overflow-hidden rounded-full border border-orange-300/30 bg-[rgba(255,138,42,0.14)] px-6 py-4 text-sm font-bold text-orange-900 shadow-[0_10px_40px_-10px_rgba(255,138,42,0.5)] backdrop-blur-xl transition hover:bg-[rgba(255,138,42,0.22)] md:hidden"
-      >
+      <div className="fixed inset-x-4 bottom-4 z-40 flex items-center gap-2 overflow-hidden rounded-full border border-orange-300/30 bg-[rgba(255,138,42,0.14)] px-3 py-3 shadow-[0_10px_40px_-10px_rgba(255,138,42,0.5)] backdrop-blur-xl md:hidden">
         <span aria-hidden className="pointer-events-none absolute -left-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-400/30 blur-3xl animate-pulse" />
         <span aria-hidden className="pointer-events-none absolute -right-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-500/20 blur-3xl animate-pulse [animation-delay:600ms]" />
         <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-orange-200/20 to-transparent blur-md" />
-        <ShoppingBag className="h-4 w-4" />
-        Carrito {totalItems > 0 && `(${totalItems})`}
-      </button>
+        <Link
+          to="/personalizados"
+          className="relative flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sweet-pink/90 px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:-translate-y-0.5"
+          aria-label="Pasteles personalizados"
+        >
+          <Cake className="h-4 w-4" />
+          <span className="hidden xs:inline sm:inline">Personalizados</span>
+        </Link>
+        <Link
+          to="/eventos"
+          className="relative flex flex-1 items-center justify-center gap-1.5 rounded-full bg-mocha/90 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5"
+          aria-label="Carrito de eventos"
+        >
+          <PartyPopper className="h-4 w-4" />
+          <span className="hidden xs:inline sm:inline">Eventos</span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setMobileCartOpen((v) => !v)}
+          className="relative flex flex-1 items-center justify-center gap-1.5 rounded-full bg-shocking px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5"
+        >
+          <ShoppingBag className="h-4 w-4" />
+          <span>Carrito{totalItems > 0 && ` (${totalItems})`}</span>
+        </button>
+      </div>
 
       <GiftModal product={giftProduct} onClose={() => setGiftProduct(null)} />
     </div>
