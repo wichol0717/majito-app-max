@@ -27,7 +27,7 @@ const puertas = [
   {
     to: "/eventos",
     letra: "C",
-    titulo: "El Carrito",
+    titulo: "El Carrito de Eventos\u00a0",
     sub: "En tu evento",
     desc: "Aparta tu fecha en el calendario, un evento por día.",
     color: "bg-mocha text-white",
