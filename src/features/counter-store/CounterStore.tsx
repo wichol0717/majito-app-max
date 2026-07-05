@@ -52,7 +52,8 @@ function CounterStoreInner() {
   const categorias = useMemo(() => {
     const set = new Set<string>();
     products.forEach((p) => {
-      if (p.categoria && p.categoria.toLowerCase() !== "paquetes") set.add(p.categoria);
+      const cat = p.categoria?.toLowerCase();
+      if (p.categoria && cat !== "paquetes" && cat !== "promociones") set.add(p.categoria);
     });
     return Array.from(set).sort();
   }, [products]);
