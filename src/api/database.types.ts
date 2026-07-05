@@ -32,6 +32,54 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
         Relationships: [];
       };
+      app_settings: {
+        Row: { key: string; value: Json; is_public: boolean; updated_at: string };
+        Insert: { key: string; value: Json; is_public?: boolean; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["app_settings"]["Insert"]>;
+        Relationships: [];
+      };
+      event_packages: {
+        Row: {
+          id: number;
+          categoria: "reposteria" | "snacks_frios";
+          personas: number;
+          nombre: string;
+          descripcion: string | null;
+          precio: number | null;
+          incluye: Json;
+          activo: boolean;
+          requiere_cotizacion: boolean;
+        };
+        Insert: {
+          id?: number;
+          categoria: "reposteria" | "snacks_frios";
+          personas: number;
+          nombre: string;
+          descripcion?: string | null;
+          precio?: number | null;
+          incluye?: Json;
+          activo?: boolean;
+          requiere_cotizacion?: boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["event_packages"]["Insert"]>;
+        Relationships: [];
+      };
+      customers: {
+        Row: {
+          id: string;
+          whatsapp: string;
+          name: string | null;
+          first_order_at: string;
+          last_order_at: string;
+          total_orders: number;
+          total_spent: number;
+          tags: string[] | null;
+          notes: string | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["customers"]["Row"]> & { whatsapp: string };
+        Update: Partial<Database["public"]["Tables"]["customers"]["Row"]>;
+        Relationships: [];
+      };
       counter_orders: {
         Row: {
           id: string;
