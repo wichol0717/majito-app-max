@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Gift, Minus, Plus } from "lucide-react";
 import { useCart, type Product } from "./CartContext";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 const MENSAJES = [
   "Feliz Cumpleaños",
@@ -21,6 +22,8 @@ interface Props {
 
 export function GiftModal({ product, onClose }: Props) {
   const { addGift, quantityOf } = useCart();
+  const { settings } = useAppSettings();
+  const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
   const [qty, setQty] = useState(1);
   const [mensaje, setMensaje] = useState(MENSAJES[0]);
   const [buyerName, setBuyerName] = useState("");
@@ -163,6 +166,9 @@ export function GiftModal({ product, onClose }: Props) {
             <Label htmlFor="recipientLocation" className="text-xs">Ubicación / dirección de entrega *</Label>
             <Textarea id="recipientLocation" value={recipientLocation} onChange={(e) => setRecipientLocation(e.target.value)} rows={2} maxLength={300} placeholder="Calle, número, colonia, referencias, ciudad" />
           </div>
+          <p className="rounded-lg bg-shocking/10 p-2 text-[11px] font-semibold text-shocking">
+            🚚 Este regalo se envía a domicilio del festejado. Se suma un costo de envío de <strong>${ENVIO_COSTO.toFixed(2)}</strong> por cada regalo.
+          </p>
         </div>
 
         <DialogFooter>
