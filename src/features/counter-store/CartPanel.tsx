@@ -27,7 +27,9 @@ export function CartPanel() {
   }, []);
 
   const costoEnvio = entrega === "envio" ? ENVIO_COSTO : 0;
-  const total = subtotal + costoEnvio;
+  const giftItemsCount = items.filter((i) => i.isGift).length;
+  const costoEnvioRegalos = giftItemsCount * ENVIO_COSTO;
+  const total = subtotal + costoEnvio + costoEnvioRegalos;
 
   const hayMostrador = items.some((i) => !i.isGift);
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
@@ -68,6 +70,7 @@ export function CartPanel() {
           lineas.push(`   👤 De: ${g.buyerName} (WA: ${g.buyerWhatsapp})`);
           lineas.push(`   🎉 Para: ${g.recipientName} (WA: ${g.recipientWhatsapp})`);
           lineas.push(`   📍 Entregar en: ${g.recipientLocation}`);
+          lineas.push(`   🚚 Envío a domicilio del festejado: $${ENVIO_COSTO.toFixed(2)}`);
         }
       });
       lineas.push("");
@@ -77,11 +80,14 @@ export function CartPanel() {
     if (entrega === "envio") {
       lineas.push(`Envío mostrador: $${ENVIO_COSTO.toFixed(2)}`);
     }
+    if (costoEnvioRegalos > 0) {
+      lineas.push(`Envío regalos (${giftItemsCount} × $${ENVIO_COSTO.toFixed(2)}): $${costoEnvioRegalos.toFixed(2)}`);
+    }
     lineas.push(`*Total a transferir: $${total.toFixed(2)}*`);
     lineas.push("");
     lineas.push("¡Hola! Aquí está mi pedido. En un momento adjunto mi comprobante de pago.");
     return lineas.join("\n");
-  }, [items, subtotal, total, entrega, direccion, ENVIO_COSTO]);
+  }, [items, subtotal, total, entrega, direccion, ENVIO_COSTO, costoEnvioRegalos, giftItemsCount]);
 
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(mensajeWhats)}`;
 
@@ -315,6 +321,12 @@ export function CartPanel() {
           <div className="flex justify-between text-foreground/70">
             <span>Envío</span>
             <span>${costoEnvio.toFixed(2)}</span>
+          </div>
+        )}
+        {costoEnvioRegalos > 0 && (
+          <div className="flex justify-between text-foreground/70">
+            <span>Envío regalos ({giftItemsCount} × ${ENVIO_COSTO.toFixed(2)})</span>
+            <span>${costoEnvioRegalos.toFixed(2)}</span>
           </div>
         )}
         <div className="flex justify-between text-lg font-bold text-shocking">
