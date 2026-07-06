@@ -17,7 +17,8 @@ const CATEGORY_ICONS: Record<string, string> = {
   Brownies: "/brownies.svg",
 };
 
-const CARRITO_EVENTOS_ICON = "/carrito-de-eventos.svg";
+const CARRITO_EVENTOS_ICON_TAB = "/carrito_eventos.png";
+const CARRITO_EVENTOS_ICON_FLOAT = "/carrito-de-eventos.svg";
 
 // Categorías fijas del mostrador — siempre visibles como iconos,
 // aunque todavía no haya productos cargados en esa categoría.
@@ -115,7 +116,7 @@ function CounterStoreInner() {
             title="Carrito de eventos"
             className="inline-flex items-center justify-center rounded-full p-1 opacity-70 transition hover:opacity-100"
           >
-            <img src={CARRITO_EVENTOS_ICON} alt="Carrito de eventos" className="h-16 w-16" />
+            <img src={CARRITO_EVENTOS_ICON_TAB} alt="Carrito de eventos" className="h-16 w-16" />
           </Link>
         </div>
 
@@ -171,7 +172,7 @@ function CounterStoreInner() {
           className="relative flex flex-1 items-center justify-center gap-1.5 rounded-full bg-mocha/90 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5"
           aria-label="Carrito de eventos"
         >
-          <img src={CARRITO_EVENTOS_ICON} alt="" className="h-5 w-5 object-contain" />
+          <img src={CARRITO_EVENTOS_ICON_FLOAT} alt="" className="h-5 w-5 object-contain" />
           <span className="hidden xs:inline sm:inline">Eventos</span>
         </Link>
         <button
