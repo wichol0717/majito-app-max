@@ -9,18 +9,15 @@ import { CartProvider, type Product, useCart } from "./CartContext";
 import { ProductCard } from "./ProductCard";
 import { GiftModal } from "./GiftModal";
 import { CartPanel } from "./CartPanel";
-import galletasIcon from "@/assets/galletas.svg.asset.json";
-import cupcakeIcon from "@/assets/cupcake.svg.asset.json";
-import pastelesIcon from "@/assets/pasteles.svg.asset.json";
-import browniesIcon from "@/assets/brownies.svg.asset.json";
-import carritoEventosIcon from "@/assets/carrito_de_eventos.png.asset.json";
 
 const CATEGORY_ICONS: Record<string, string> = {
-  Galletas: galletasIcon.url,
-  Cupcakes: cupcakeIcon.url,
-  Pasteles: pastelesIcon.url,
-  Brownies: browniesIcon.url,
+  Galletas: "/galletas.svg",
+  Cupcakes: "/cupcakes.svg",
+  Pasteles: "/pasteles.svg",
+  Brownies: "/brownies.svg",
 };
+
+const CARRITO_EVENTOS_ICON = "/carrito_eventos.png";
 
 // Categorías fijas del mostrador — siempre visibles como iconos,
 // aunque todavía no haya productos cargados en esa categoría.
@@ -118,7 +115,7 @@ function CounterStoreInner() {
             title="Carrito de eventos"
             className="inline-flex items-center justify-center rounded-full p-1 opacity-70 transition hover:opacity-100"
           >
-            <img src={carritoEventosIcon.url} alt="Carrito de eventos" className="h-16 w-16" />
+            <img src={CARRITO_EVENTOS_ICON} alt="Carrito de eventos" className="h-16 w-16" />
           </Link>
         </div>
 
