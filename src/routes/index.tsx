@@ -4,6 +4,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import manosPostre from "@/assets/manos-postre.jpg";
 import { CounterStore } from "@/features/counter-store/CounterStore";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -65,6 +66,7 @@ function Home() {
           </Link>
         </p>
       </footer>
+      <InstallPrompt />
     </main>
   );
 }
