@@ -3,7 +3,6 @@
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import manosPostre from "@/assets/manos-postre.jpg";
-import tituloMajito from "@/assets/titulo_majito.svg.asset.json";
 import { CounterStore } from "@/features/counter-store/CounterStore";
 
 export const Route = createFileRoute("/")({
@@ -17,7 +16,7 @@ function Home() {
         <p className="text-sm uppercase tracking-[0.3em] text-mocha">{"\n"}</p>
         <h1 className="mt-3 flex justify-center">
           <img
-            src={tituloMajito.url}
+            src="/titulo_majito.svg"
             alt="Majito Cake"
             width={908}
             height={381}
