@@ -17,7 +17,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   Brownies: "/brownies.svg",
 };
 
-const CARRITO_EVENTOS_ICON = "/carrito_eventos.png";
+const CARRITO_EVENTOS_ICON = "/carrito-de-eventos.svg";
 
 // Categorías fijas del mostrador — siempre visibles como iconos,
 // aunque todavía no haya productos cargados en esa categoría.
