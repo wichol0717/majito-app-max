@@ -1,0 +1,15 @@
+{
+  "name": "Majito Cake",
+  "short_name": "Majito",
+  "description": "Repostería artesanal en Tuxpan, Veracruz",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff7ec",
+  "theme_color": "#e91e63",
+  "icons": [
+    { "src": "/majito-inicial.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/majito-inicial.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
