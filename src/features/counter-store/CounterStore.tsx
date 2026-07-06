@@ -2,7 +2,7 @@
 // Ruta A: Catálogo de mostrador con stock vivo (esqueleto v1).
 
 import { useEffect, useMemo, useState } from "react";
-import { ShoppingBag, Cake, PartyPopper } from "lucide-react";
+import { ShoppingBag, Cake, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/api/supabase";
 import { CartProvider, type Product, useCart } from "./CartContext";
@@ -132,9 +132,27 @@ function CounterStoreInner() {
         )}
       </div>
 
-      <div className={`md:sticky md:top-4 md:self-start ${mobileCartOpen ? "block" : "hidden md:block"}`}>
+      {/* Desktop cart (sticky) */}
+      <div className="hidden md:sticky md:top-4 md:self-start md:block">
         <CartPanel />
       </div>
+
+      {/* Mobile cart drawer */}
+      {mobileCartOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/50 md:hidden" onClick={() => setMobileCartOpen(false)}>
+          <div className="mt-auto max-h-[90vh] overflow-y-auto rounded-t-3xl bg-crema p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => setMobileCartOpen(false)}
+              className="mb-3 ml-auto flex h-9 w-9 items-center justify-center rounded-full bg-mocha/10 text-mocha hover:bg-mocha/20"
+              aria-label="Cerrar carrito"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <CartPanel />
+          </div>
+        </div>
+      )}
 
       <div className="fixed inset-x-4 bottom-4 z-40 flex items-center gap-2 overflow-hidden rounded-full border border-orange-300/30 bg-[rgba(255,138,42,0.14)] px-3 py-3 shadow-[0_10px_40px_-10px_rgba(255,138,42,0.5)] backdrop-blur-xl md:hidden">
         <span aria-hidden className="pointer-events-none absolute -left-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-400/30 blur-3xl animate-pulse" />
@@ -153,7 +171,7 @@ function CounterStoreInner() {
           className="relative flex flex-1 items-center justify-center gap-1.5 rounded-full bg-mocha/90 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5"
           aria-label="Carrito de eventos"
         >
-          <PartyPopper className="h-4 w-4" />
+          <img src={CARRITO_EVENTOS_ICON} alt="" className="h-5 w-5 object-contain" />
           <span className="hidden xs:inline sm:inline">Eventos</span>
         </Link>
         <button
