@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { CheckCircle2, ArrowRight, ExternalLink, XCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, ArrowRight, ExternalLink, XCircle, RefreshCw, Bike, Gift } from "lucide-react";
 import { AdminShell } from "@/features/admin/AdminShell";
 import { RequireAdmin } from "@/features/admin/RequireAdmin";
 import { useAdminAuth } from "@/features/admin/AdminAuth";
@@ -51,6 +51,28 @@ function AdminPedidos() {
     if (tab === "entregados") return r.status === "DELIVERED" || r.delivery_status === "entregado";
     return r.status !== "PENDING" && r.delivery_status !== "entregado";
   });
+
+  function enviarARepartidor(r: any) {
+    const num = window.prompt("Número de WhatsApp del repartidor (10 dígitos, sin espacios):", "521");
+    if (!num) return;
+    const clean = num.replace(/[^0-9]/g, "");
+    if (clean.length < 8) { alert("Número inválido"); return; }
+    const url = `${window.location.origin}/reparto/${r.id}`;
+    const dir = r.direccion_texto ? `📍 ${r.direccion_texto}\n` : "";
+    const maps = r.latitud != null
+      ? `🗺️ https://www.google.com/maps/dir/?api=1&destination=${r.latitud},${r.longitud}\n`
+      : "";
+    const msg = [
+      `*Nueva entrega — Majito Cake*`,
+      `Cliente: ${r.cliente}`,
+      dir + maps,
+      `Total a cobrar: $${Number(r.total).toFixed(2)} (${(r.metodo ?? "").toUpperCase()})`,
+      ``,
+      `Toca aquí para ver toda la info y confirmar la entrega:`,
+      url,
+    ].join("\n");
+    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, "_blank");
+  }
 
   return (
     <AdminShell title="Pedidos">
@@ -134,6 +156,19 @@ function AdminPedidos() {
                   className="flex items-center gap-1 rounded-full bg-shocking px-3 py-1 text-[11px] font-bold text-white">
                   <ArrowRight className="h-3 w-3"/> Avanzar
                 </button>
+              )}
+              {r.status !== "PENDING" && r.direccion_texto && r.delivery_status !== "entregado" && (
+                <button
+                  onClick={() => enviarARepartidor(r)}
+                  className="flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 text-[11px] font-bold text-white">
+                  <Bike className="h-3 w-3"/> Enviar a repartidor
+                </button>
+              )}
+              {r.tabla === "gift_orders" && (
+                <a href={`/regalo/${r.id}`} target="_blank" rel="noreferrer"
+                   className="flex items-center gap-1 rounded-full bg-sweet-pink px-3 py-1 text-[11px] font-bold text-foreground hover:bg-sweet-pink/80">
+                  <Gift className="h-3 w-3"/> Tarjeta digital
+                </a>
               )}
               <a href={`/pedido/${r.id}`} target="_blank" rel="noreferrer"
                  className="rounded-full bg-mocha/10 px-3 py-1 text-[11px] font-bold text-mocha hover:bg-mocha/20">
