@@ -1,21 +1,43 @@
 import { useEffect, useMemo, useState } from "react";
-import { Gift, Minus, Plus, Trash2, MessageCircle, Cake, Flame, Sparkles } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Gift, Minus, Plus, Trash2, MessageCircle, Cake, Flame, Sparkles, Upload, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { useCart, type Product } from "./CartContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { supabase } from "@/api/supabase";
+import { AddressPicker, type AddressValue } from "@/components/AddressPicker";
+
+function generarReferencia() {
+  const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let s = "";
+  for (let i = 0; i < 4; i++) s += abc[Math.floor(Math.random() * abc.length)];
+  return `MAJITO-${s}`;
+}
 
 export function CartPanel() {
   const { items, increment, decrement, remove, subtotal, totalItems, hasAnyGift, clear, addToCart, setCakeMessage } =
     useCart();
   const { settings } = useAppSettings();
+  const navigate = useNavigate();
   const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
   const WHATSAPP_NUM = String(settings.whatsapp_number);
 
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
-  const [direccion, setDireccion] = useState("");
+  const [direccion, setDireccion] = useState<AddressValue | null>(null);
+
+  // Comprador (para crear registro del pedido)
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
+
+  // Método de pago + estado del checkout SPEI
+  const [metodo, setMetodo] = useState<"efectivo" | "spei">("efectivo");
+  const [referencia] = useState(generarReferencia());
+  const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
+  const [comprobanteUrl, setComprobanteUrl] = useState<string | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [refCopiada, setRefCopiada] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Upsell state
   const [velaProd, setVelaProd] = useState<Product | null>(null);
@@ -33,8 +55,8 @@ export function CartPanel() {
   // la de un regalo (mismo comprador entrega en el mismo lugar), se cobra 1 solo envío.
   const direccionesEnvio = useMemo(() => {
     const set = new Set<string>();
-    if (entrega === "envio" && direccion.trim().length >= 8) {
-      set.add(normalizarDir(direccion));
+    if (entrega === "envio" && direccion && direccion.direccion_texto.length >= 5) {
+      set.add(normalizarDir(direccion.direccion_texto));
     }
     items.forEach((i) => {
       if (i.isGift && i.giftDetails?.recipientLocation) {
@@ -50,12 +72,19 @@ export function CartPanel() {
 
   const hayMostrador = items.some((i) => !i.isGift);
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
-  const puedeConfirmar =
+  const direccionOk = entrega === "tienda" || !hayMostrador || (!!direccion && direccion.direccion_texto.length >= 5);
+  const puedeConfirmarWhats =
     items.length > 0 &&
-    (entrega === "tienda" || !hayMostrador || direccion.trim().length >= 8);
+    direccionOk;
+  const puedeConfirmarSpei =
+    puedeConfirmarWhats &&
+    buyerName.trim().length >= 2 &&
+    buyerWhatsapp.trim().length >= 8 &&
+    !!comprobanteUrl;
 
   const mensajeWhats = useMemo(() => {
     const lineas: string[] = ["*Nuevo pedido — Majito Cake*", ""];
+    if (metodo === "spei") lineas.push(`Referencia: *${referencia}*`, "");
     const regularItems = items.filter((i) => !i.isGift);
     const giftItems = items.filter((i) => i.isGift);
 
@@ -68,8 +97,9 @@ export function CartPanel() {
           lineas.push(`   💌 Mensaje en pastel: "${i.cakeMessage.trim()}"`);
         }
       });
-      if (entrega === "envio") {
-        lineas.push(`   📍 Enviar a: ${direccion}`);
+      if (entrega === "envio" && direccion) {
+        lineas.push(`   📍 Enviar a: ${direccion.direccion_texto}`);
+        lineas.push(`   🗺️ https://www.google.com/maps?q=${direccion.latitud},${direccion.longitud}`);
       } else {
         lineas.push("   🏪 Recoger en local");
       }
@@ -79,8 +109,8 @@ export function CartPanel() {
     if (giftItems.length > 0) {
       lineas.push("*🎁 Regalos (envío individual):*");
       const yaCobradas = new Set<string>();
-      if (entrega === "envio" && direccion.trim().length >= 8) {
-        yaCobradas.add(normalizarDir(direccion));
+      if (entrega === "envio" && direccion) {
+        yaCobradas.add(normalizarDir(direccion.direccion_texto));
       }
       giftItems.forEach((i, idx) => {
         const sub = i.quantity * Number(i.product.precio);
@@ -91,6 +121,9 @@ export function CartPanel() {
           lineas.push(`   👤 De: ${g.buyerName} (WA: ${g.buyerWhatsapp})`);
           lineas.push(`   🎉 Para: ${g.recipientName} (WA: ${g.recipientWhatsapp})`);
           lineas.push(`   📍 Entregar en: ${g.recipientLocation}`);
+          if (g.recipientLat != null && g.recipientLng != null) {
+            lineas.push(`   🗺️ https://www.google.com/maps?q=${g.recipientLat},${g.recipientLng}`);
+          }
           const key = normalizarDir(g.recipientLocation);
           if (yaCobradas.has(key)) {
             lineas.push(`   🚚 Envío: incluido (misma dirección ya cobrada)`);
@@ -109,11 +142,121 @@ export function CartPanel() {
     }
     lineas.push(`*Total a transferir: $${total.toFixed(2)}*`);
     lineas.push("");
-    lineas.push("¡Hola! Aquí está mi pedido. En un momento adjunto mi comprobante de pago.");
+    if (metodo === "spei" && comprobanteUrl) {
+      lineas.push("Ya subí el comprobante SPEI. Enlace del pedido:");
+    } else {
+      lineas.push("¡Hola! Aquí está mi pedido. En un momento adjunto mi comprobante de pago.");
+    }
     return lineas.join("\n");
-  }, [items, subtotal, total, entrega, direccion, ENVIO_COSTO, enviosCobrables, costoEnviosTotal]);
+  }, [items, subtotal, total, entrega, direccion, ENVIO_COSTO, enviosCobrables, costoEnviosTotal, metodo, referencia, comprobanteUrl]);
 
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(mensajeWhats)}`;
+
+  async function subirComprobante(file: File) {
+    setError(null);
+    setSubiendo(true);
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${referencia}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("comprobantes-pago")
+        .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("comprobantes-pago").getPublicUrl(path);
+      setComprobanteUrl(data.publicUrl);
+    } catch (e: any) {
+      setError(e?.message ?? "No se pudo subir el comprobante");
+    } finally {
+      setSubiendo(false);
+    }
+  }
+
+  async function confirmarSpei() {
+    if (!puedeConfirmarSpei) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      // Descuenta stock (best-effort — si falla, sigue con el pedido)
+      for (const it of items) {
+        try {
+          await supabase.rpc("decrement_stock", { _product_id: it.product.id, _qty: it.quantity } as any);
+        } catch { /* ignore, admin resolverá */ }
+      }
+
+      // Regalos: uno por regalo, así el destinatario recibe su semáforo
+      const giftItems = items.filter((i) => i.isGift);
+      const regularItems = items.filter((i) => !i.isGift);
+      const yaCobradas = new Set<string>();
+      let primerId: string | null = null;
+
+      if (regularItems.length > 0) {
+        const envioCostoMostrador =
+          entrega === "envio" && direccion ? ENVIO_COSTO : 0;
+        if (envioCostoMostrador > 0 && direccion) yaCobradas.add(normalizarDir(direccion.direccion_texto));
+        const totalMostrador = regularItems.reduce((s, i) => s + i.quantity * Number(i.product.precio), 0) + envioCostoMostrador;
+        const payload: any = {
+          customer_name: buyerName.trim(),
+          customer_whatsapp: buyerWhatsapp.trim(),
+          total_paid: totalMostrador,
+          payment_method: "spei",
+          proof_image_url: comprobanteUrl,
+          payment_reference: referencia,
+          status: "PENDING",
+          delivery_status: "validando_pago",
+          envio_costo: envioCostoMostrador,
+          direccion_texto: entrega === "envio" && direccion ? direccion.direccion_texto : null,
+          latitud: entrega === "envio" && direccion ? direccion.latitud : null,
+          longitud: entrega === "envio" && direccion ? direccion.longitud : null,
+          notas: regularItems.map((i) => `${i.quantity}× ${i.product.nombre}${i.cakeMessage ? ` [msg: ${i.cakeMessage}]` : ""}`).join(" | "),
+        };
+        const { data, error: insErr } = await (supabase.from("counter_orders") as any).insert(payload).select("id").single();
+        if (insErr) throw insErr;
+        primerId = data?.id ?? null;
+      }
+
+      for (const g of giftItems) {
+        const key = g.giftDetails ? normalizarDir(g.giftDetails.recipientLocation) : "";
+        const cobraEnvio = key && !yaCobradas.has(key);
+        if (cobraEnvio) yaCobradas.add(key);
+        const envio = cobraEnvio ? ENVIO_COSTO : 0;
+        const totalRegalo = g.quantity * Number(g.product.precio) + envio;
+        const payload: any = {
+          customer_name: g.giftDetails?.buyerName ?? buyerName.trim(),
+          customer_whatsapp: g.giftDetails?.buyerWhatsapp ?? buyerWhatsapp.trim(),
+          total_paid: totalRegalo,
+          payment_method: "spei",
+          proof_image_url: comprobanteUrl,
+          payment_reference: referencia,
+          status: "PENDING",
+          delivery_status: "validando_pago",
+          envio_costo: envio,
+          direccion_texto: g.giftDetails?.recipientLocation ?? null,
+          latitud: g.giftDetails?.recipientLat ?? null,
+          longitud: g.giftDetails?.recipientLng ?? null,
+          gift_items: [{
+            producto: g.product.nombre,
+            cantidad: g.quantity,
+            precio: Number(g.product.precio),
+            mensaje: g.giftMessage,
+            para: g.giftDetails?.recipientName,
+            wa_festejado: g.giftDetails?.recipientWhatsapp,
+          }],
+        };
+        const { data, error: insErr } = await (supabase.from("gift_orders") as any).insert(payload).select("id").single();
+        if (insErr) throw insErr;
+        if (!primerId) primerId = data?.id ?? null;
+      }
+
+      clear();
+      if (primerId) {
+        navigate({ to: "/pedido/$id", params: { id: primerId } });
+      }
+    } catch (e: any) {
+      setError(e?.message ?? "No se pudo registrar el pedido");
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   if (items.length === 0) {
     return (
@@ -315,26 +458,85 @@ export function CartPanel() {
         </div>
         {entrega === "envio" && (
           <div className="mt-3">
-            <label className="mb-1 block text-xs font-semibold text-foreground">
-              Dirección completa *
-            </label>
-            <Textarea
+            <AddressPicker
               value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              placeholder="Calle, número, colonia, referencia…"
-              rows={2}
-              maxLength={300}
+              onChange={setDireccion}
+              label="Dirección exacta *"
+              placeholder="Busca tu calle, colonia o referencia"
             />
           </div>
         )}
       </div>
 
-      <div className="rounded-xl bg-crema p-3 text-xs text-foreground">
-        <p className="mb-1 font-semibold text-shocking">Datos para transferencia</p>
-        <p>Banco: <strong>{settings.bank_name}</strong></p>
-        <p>Cuenta: <strong>{settings.bank_account}</strong></p>
-        <p>Titular: <strong>{settings.bank_holder}</strong></p>
+      {/* Método de pago */}
+      <div className="border-t border-mocha/10 pt-3">
+        <p className="mb-2 text-sm font-semibold text-foreground">Método de pago</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setMetodo("efectivo")}
+            className={`rounded-xl border-2 p-3 text-left text-xs transition ${metodo === "efectivo" ? "border-shocking bg-shocking/10" : "border-mocha/20 bg-white hover:border-shocking/40"}`}>
+            <p className="font-semibold text-foreground">Efectivo / WhatsApp</p>
+            <p className="text-mocha">Coordinar por chat</p>
+          </button>
+          <button type="button" onClick={() => setMetodo("spei")}
+            className={`rounded-xl border-2 p-3 text-left text-xs transition ${metodo === "spei" ? "border-shocking bg-shocking/10" : "border-mocha/20 bg-white hover:border-shocking/40"}`}>
+            <p className="font-semibold text-foreground">Transferencia SPEI</p>
+            <p className="text-mocha">Sube tu comprobante</p>
+          </button>
+        </div>
       </div>
+
+      {/* Datos bancarios: siempre visibles pero destacados si SPEI */}
+      <div className={`rounded-xl p-3 text-xs text-foreground ${metodo === "spei" ? "bg-white ring-2 ring-shocking/40" : "bg-crema"}`}>
+        <p className="mb-1 font-semibold text-shocking">Datos para transferencia SPEI</p>
+        <p>Banco: <strong>{settings.bank_name}</strong></p>
+        <p>Cuenta / CLABE: <strong>{settings.bank_account}</strong></p>
+        <p>Titular: <strong>{settings.bank_holder}</strong></p>
+        {metodo === "spei" && (
+          <>
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-crema p-2">
+              <div className="flex-1">
+                <p className="text-[10px] uppercase text-mocha">Referencia (concepto)</p>
+                <p className="font-mono text-sm font-bold text-shocking">{referencia}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { navigator.clipboard.writeText(referencia); setRefCopiada(true); setTimeout(() => setRefCopiada(false), 1500); }}
+                className="flex items-center gap-1 rounded bg-shocking px-2 py-1 text-[11px] font-bold text-white"
+              >
+                {refCopiada ? <CheckCircle2 className="h-3 w-3"/> : <Copy className="h-3 w-3"/>}
+                {refCopiada ? "Copiada" : "Copiar"}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] text-mocha">Monto a transferir: <strong className="text-shocking">${total.toFixed(2)}</strong></p>
+          </>
+        )}
+      </div>
+
+      {metodo === "spei" && (
+        <div className="space-y-2 rounded-xl border border-shocking/30 bg-white p-3">
+          <p className="text-xs font-bold uppercase tracking-wide text-shocking">Tus datos</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="Tu nombre *"
+              className="rounded border border-mocha/20 px-2 py-1.5 text-xs" maxLength={80}/>
+            <input value={buyerWhatsapp} onChange={(e) => setBuyerWhatsapp(e.target.value)} placeholder="Tu WhatsApp *"
+              inputMode="tel" className="rounded border border-mocha/20 px-2 py-1.5 text-xs" maxLength={20}/>
+          </div>
+          <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-shocking/40 bg-shocking/5 p-4 text-xs font-semibold text-shocking hover:bg-shocking/10">
+            {subiendo ? <Loader2 className="h-4 w-4 animate-spin"/> : comprobanteUrl ? <CheckCircle2 className="h-4 w-4"/> : <Upload className="h-4 w-4"/>}
+            {subiendo ? "Subiendo…" : comprobanteUrl ? "Comprobante cargado — cambiar" : "Subir comprobante (foto)"}
+            <input type="file" accept="image/*" capture="environment" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) { setComprobanteFile(f); subirComprobante(f); } }}
+            />
+          </label>
+          {comprobanteUrl && (
+            <img src={comprobanteUrl} alt="Comprobante" className="mx-auto max-h-32 rounded"/>
+          )}
+          {comprobanteFile && !comprobanteUrl && !subiendo && (
+            <p className="text-[11px] text-mocha">Archivo listo: {comprobanteFile.name}</p>
+          )}
+          {error && <p className="text-[11px] text-red-600">{error}</p>}
+        </div>
+      )}
 
       <div className="space-y-1 border-t border-mocha/10 pt-3 text-sm">
         <div className="flex justify-between text-foreground/70">
@@ -353,23 +555,38 @@ export function CartPanel() {
         </div>
       </div>
 
-      <a
-        href={puedeConfirmar ? whatsappUrl : undefined}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-disabled={!puedeConfirmar}
-        onClick={(e) => {
-          if (!puedeConfirmar) e.preventDefault();
-        }}
-        className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow transition ${
-          puedeConfirmar
-            ? "bg-shocking hover:bg-shocking/90"
-            : "cursor-not-allowed bg-mocha/40"
-        }`}
-      >
-        <MessageCircle className="h-5 w-5" />
-        Confirmar pedido y Enviar Comprobante
-      </a>
+      {metodo === "efectivo" ? (
+        <a
+          href={puedeConfirmarWhats ? whatsappUrl : undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-disabled={!puedeConfirmarWhats}
+          onClick={(e) => { if (!puedeConfirmarWhats) e.preventDefault(); }}
+          className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow transition ${
+            puedeConfirmarWhats ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/40"
+          }`}
+        >
+          <MessageCircle className="h-5 w-5" />
+          Confirmar y enviar por WhatsApp
+        </a>
+      ) : (
+        <button
+          type="button"
+          disabled={!puedeConfirmarSpei || enviando}
+          onClick={confirmarSpei}
+          className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow transition ${
+            puedeConfirmarSpei && !enviando ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/40"
+          }`}
+        >
+          {enviando ? <Loader2 className="h-5 w-5 animate-spin"/> : <CheckCircle2 className="h-5 w-5"/>}
+          {enviando ? "Registrando pedido…" : "Confirmar pedido SPEI"}
+        </button>
+      )}
+      {metodo === "spei" && !puedeConfirmarSpei && (
+        <p className="text-center text-[11px] text-mocha">
+          Completa tus datos, dirección {hayMostrador && entrega === "envio" ? "" : "(si aplica)"} y sube el comprobante para confirmar.
+        </p>
+      )}
 
       <Button variant="ghost" size="sm" onClick={clear} className="text-mocha">
         Vaciar carrito
