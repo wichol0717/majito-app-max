@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
-import { getGoogleMapsKey } from "@/lib/maps.functions";
 
 /**
  * Selector de dirección con Google Places Autocomplete + mapa arrastrable.
@@ -55,7 +53,6 @@ async function ensureMapsLibraries() {
 }
 
 export function AddressPicker({ value, onChange, label = "Dirección de entrega *", placeholder = "Busca calle, colonia o referencia" }: Props) {
-  const getKey = useServerFn(getGoogleMapsKey);
   const inputRef = useRef<HTMLInputElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -74,17 +71,15 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
       "";
 
-    const keyPromise = browserKey ? Promise.resolve({ key: browserKey }) : getKey();
-
-    keyPromise
-      .then(({ key }) => {
+    Promise.resolve(browserKey)
+      .then((key) => {
         if (!key) throw new Error("Maps no está activo en este deploy. Escribe la dirección completa para continuar.");
         return loadGoogleMaps(key);
       })
       .then(() => { if (!cancelled) setReady(true); })
       .catch((e: any) => { if (!cancelled) setError(e?.message ?? "Maps no está activo. Escribe la dirección completa para continuar."); });
     return () => { cancelled = true; };
-  }, [getKey]);
+  }, []);
 
   const handleManualChange = (text: string) => {
     setManualAddress(text);
