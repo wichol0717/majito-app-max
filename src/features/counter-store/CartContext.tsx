@@ -19,6 +19,8 @@ export interface GiftDetails {
   recipientName: string;
   recipientWhatsapp: string;
   recipientLocation: string;
+  recipientLat?: number;
+  recipientLng?: number;
 }
 
 interface CartCtx {
