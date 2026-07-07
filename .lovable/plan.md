@@ -1,114 +1,89 @@
-Voy a implementar 5 bloques, todos gestionados desde Supabase. Antes de arrancar necesito tu OK y algunas decisiones ❓.
+## Fase 1 — Google Maps + SPEI + Semáforo/Admin
 
----
+Alcance: módulos 1, 2 y 3 del pedido. Regalos digitales (4) y repartidor (5) quedan para fases siguientes.
 
-## 1. Datos bancarios y WhatsApp editables desde Supabase
+### 1. Base de datos (migración única)
 
-Hoy están hardcoded en `CartPanel.tsx`. Los muevo a una tabla de configuración.
+Adaptar tablas existentes, sin duplicar:
 
-**Tabla `app_settings`** (key/value):
-- `whatsapp_number`, `bank_name`, `bank_account`, `bank_holder`, `shipping_cost`
-- RLS: lectura pública (`anon` SELECT), escritura solo `admin`
-- Hook `useAppSettings()` que consume `CartPanel` y todos los mensajes de WhatsApp
-- Página `/admin/configuracion` (protegida) con formulario para editarlos
+- `counter_orders` y `gift_orders`: añadir columnas
+  - `direccion_texto text`, `latitud numeric(10,7)`, `longitud numeric(10,7)`
+  - `payment_reference text` (ej. `MAJITO-A3F9`)
+  - `proof_image_url` ya existe → reutilizar
+  - `delivery_status text default 'validando_pago'` con CHECK en `('validando_pago','en_cocina','listo','en_camino','entregado')`
+  - `envio_costo numeric(10,2) default 0`
+- `customers`: añadir `email text`, `origen text default 'directo'`, `cupon_activo text`
+- `app_settings`: la clave `shipping_cost` ya existe (80). Se seguirá leyendo desde ahí.
+- Storage: crear bucket público `comprobantes-pago` + policy anon INSERT/SELECT para subir fotos de comprobante.
 
----
+### 2. Google Maps (módulo 1)
 
-## 2. Panel de admin con contraseña + inventario + control de stock
+- Guardar `GOOGLE_MAPS_BROWSER_KEY` como secreto público expuesto vía `VITE_GOOGLE_MAPS_BROWSER_KEY` (la key ya dada por el usuario, `@secret:GOOGLE_API_KEY`, se copia a un nombre `VITE_*` para uso en browser). Restringida por referrer en Google Cloud (fuera del alcance de esta app).
+- Nuevo componente `src/components/AddressPicker.tsx`:
+  - Carga el script de Maps JS API async con `loading=async&callback=initMap&libraries=places`.
+  - Usa `google.maps.places.PlaceAutocompleteElement` (Places API New) restringido a `componentRestrictions: { country: 'mx' }` y sesgado a Tuxpan, Veracruz (`locationBias` centrado en 20.9569, -97.4083, radio 25 km).
+  - Al seleccionar un lugar, monta un `google.maps.Map` con marcador rojo arrastrable; el usuario puede afinar la posición.
+  - Devuelve `{ direccion_texto, latitud, longitud }` al padre.
+- Se integra en `CartPanel.tsx` (dirección de mostrador) y `GiftModal.tsx` (dirección de festejado). Reemplaza el input de texto libre actual.
 
-**❓ Decisión clave — cómo proteger el admin:**
-- **A) Contraseña compartida** guardada como secret server-side (`ADMIN_PANEL_PASSWORD`). Rápido, sin login real.
-- **B) Login Supabase Auth + tabla `user_roles`** con rol `admin` (patrón estándar `has_role`). Más seguro y auditable.
+### 3. Flujo SPEI + comprobante (módulo 2)
 
-Recomiendo **B** — ya usas Supabase y es lo correcto para roles. Si prefieres simplicidad ahora, hago A y migramos después.
+- En `CartPanel.tsx` reemplazar el checkout actual por un flujo de 2 pasos:
+  1. Selección de método: `Efectivo` (mantiene flujo WhatsApp) o `Transferencia SPEI` (nuevo).
+  2. Si SPEI:
+     - Genera `payment_reference = 'MAJITO-' + <4 chars A-Z0-9>`.
+     - Muestra tarjeta con Banco, Titular, CLABE (de `app_settings`) + referencia + monto total (subtotal + envío único por dirección, como ya está implementado).
+     - Input `file` para subir comprobante → sube a bucket `comprobantes-pago` con path `${payment_reference}.jpg`, guarda URL pública.
+     - Botón "Confirmar pedido" → inserta filas en `counter_orders` / `gift_orders` con:
+       - `payment_method='spei'`, `proof_image_url`, `payment_reference`, `direccion_texto`, `latitud`, `longitud`, `envio_costo`, `delivery_status='validando_pago'`, `status='PENDING'`.
+     - Redirige a `/pedido/:id` (tracking).
+- Envío ($80) sigue viniendo de `app_settings.shipping_cost` y sumándose una vez por dirección única (regla ya existente).
 
-**Rutas admin nuevas** (bajo `_authenticated/` con rol admin, o gate por contraseña si eliges A):
-- `/admin/inventario` — lista de `products`, editar `stock`, `precio`, `activo`; badge de "bajo stock"
-- `/admin/configuracion` — §1
-- `/admin/clientes` — §3
-- `/admin/paquetes-eventos` — §4
+### 4. Semáforo / rastreo cliente (módulo 3)
 
-**No vender más de lo que hay:**
-- Ya existe `stock` en `products` y `CartContext` respeta el tope al agregar
-- Añado función Postgres `decrement_stock(product_id, qty)` con `SECURITY DEFINER` — `UPDATE products SET stock = stock - qty WHERE id = ? AND stock >= qty RETURNING *`; si no devuelve fila, lanza error
-- Se llama al confirmar pedido (antes de abrir WhatsApp) para reservar stock atómicamente
-- Pedido queda `PENDING` en `counter_orders`; botón admin para "Cancelar y devolver stock"
+- Nueva ruta pública `src/routes/pedido.$id.tsx`:
+  - Lee el pedido por id (busca en `counter_orders` y `gift_orders`).
+  - Línea de tiempo de 5 pasos: Validando pago → En cocina → Listo → En camino → Entregado. Ilumina los pasos ≤ `delivery_status` actual.
+  - Muestra referencia, total, dirección, mini-mapa con el pin del pedido.
+  - Se suscribe a cambios realtime de Supabase para reflejar avances en vivo.
 
----
+### 5. Panel admin extendido (módulo 3)
 
-## 3. Base de datos de clientes (CRM recurrentes)
+- Nueva ruta `src/routes/admin.pedidos.tsx` (protegida por `RequireAdmin` ya existente):
+  - Tabs: "Pendientes de pago" | "En curso" | "Entregados".
+  - Cada tarjeta muestra cliente, total, dirección con link a Google Maps, thumbnail del comprobante (click → modal grande).
+  - Acciones vía server fns en `src/lib/admin.functions.ts`:
+    - `adminApproveOrder({password, id, tabla})` → marca `status='VERIFIED'` y `delivery_status='en_cocina'`.
+    - `adminAdvanceDelivery({password, id, tabla})` → avanza al siguiente estado del semáforo.
+- En `src/routes/admin.configuracion.tsx` (ya existe) se garantiza que `shipping_cost` es editable (ya lo es via `adminUpdateSetting`).
+- En `src/routes/admin.clientes.tsx` añadir filtro por `origen`.
 
-**Tabla `customers`:**
-```
-id uuid pk, whatsapp text unique, name text,
-first_order_at, last_order_at timestamptz,
-total_orders int, total_spent numeric,
-tags text[], notes text
-```
+### 6. Detalles técnicos
 
-**Trigger** en `counter_orders`, `custom_cake_orders`, `event_bookings`, `gift_orders`: al insertar hace upsert por `whatsapp` e incrementa contadores.
+- No se toca `src/integrations/supabase/*` (auto-gen).
+- `src/api/database.types.ts` se amplía manualmente con las nuevas columnas.
+- Realtime en `pedido.$id.tsx` usa el cliente browser de `@/api/supabase`.
+- La key de Google la guardo como secreto runtime `GOOGLE_MAPS_BROWSER_KEY` y además la escribo al `.env` como `VITE_GOOGLE_MAPS_BROWSER_KEY` para que el browser la lea. La key dada por el usuario está referrer-restringida (queda a su cargo agregar `*.lovable.app` y su dominio final en Google Cloud Console).
+- Se seguirá enviando también el mensaje de WhatsApp actual al confirmar (para no romper el flujo existente); solo se añade el registro en BD y la carga del comprobante.
 
-**UI `/admin/clientes`:**
-- Lista con búsqueda y filtro "recurrentes" (`total_orders >= 3`)
-- Botón "Enviar promo por WhatsApp" → abre `wa.me` con plantilla editable
-- RLS: solo admin (contiene PII)
+### Archivos que se van a crear/editar
 
----
+- Migración SQL (nueva).
+- Bucket `comprobantes-pago` (nuevo).
+- `src/components/AddressPicker.tsx` (nuevo).
+- `src/routes/pedido.$id.tsx` (nuevo).
+- `src/routes/admin.pedidos.tsx` (nuevo).
+- `src/features/counter-store/CartPanel.tsx` (editar: flujo SPEI + AddressPicker).
+- `src/features/counter-store/GiftModal.tsx` (editar: AddressPicker para festejado).
+- `src/lib/admin.functions.ts` (editar: aprobar/avanzar/listar pedidos).
+- `src/routes/admin.clientes.tsx` (editar: filtro por origen).
+- `src/routes/admin.tsx` (editar: link a /admin/pedidos).
+- `src/api/database.types.ts` (editar: nuevas columnas).
+- `.env` (nueva var `VITE_GOOGLE_MAPS_BROWSER_KEY`).
 
-## 4. Carrito de Eventos — 2 categorías × 4 paquetes
+### Fuera de fase 1 (para siguiente turno)
 
-En `/eventos`, reestructurar en 2 pasos:
+- Módulo 4: Tarjeta digital `/regalo/:id`, banner promo `?promo=REGALO5`, cupones SOYBUENAMIGO/REGALO15, captura de `origen=regalo_digital`.
+- Módulo 5: Ruta `/reparto/:id`, botón "Enviar a Repartidor" con prompt del número, QR de la tarjeta de regalo, confirmar entrega.
 
-**Paso 1 — Categoría:** 🧁 Repostería · 🥪 Snacks fríos  
-**Paso 2 — Tamaño:** 50 · 100 · 150 · 200+ personas (200+ = "cotización personalizada")
-
-**Tabla `event_packages`:**
-```
-id, categoria ('reposteria'|'snacks_frios'),
-personas int, nombre, descripcion,
-precio numeric, incluye jsonb, activo bool
-```
-
-Editable desde `/admin/paquetes-eventos`. Al elegir → formulario existente de reserva → WhatsApp con detalle completo (modalidad de entrega obligatoria, ya lo tienes en memoria).
-
-**❓ ¿Me pasas precios y contenido de cada paquete o los creo como placeholders para que los edites en el admin?**
-
----
-
-## 5. Upsells antes de cerrar la venta (CartPanel)
-
-Bloque nuevo **"¿Le agregas un detalle especial?"** justo antes del botón "Confirmar pedido", con 3 tarjetas:
-
-1. **🎁 Regalo sorpresa para alguien** — abre modal con productos `categoria='regalos'` (reusa flujo `addGift` existente con destinatario y mensaje)
-2. **🕯️ Velas** — selector de cantidad; nuevos productos `categoria='velas'`
-3. **💌 Mensaje en el pastel** — solo aparece si hay `categoria='pasteles'` en el carrito; textarea máx 60 chars que se adjunta al item en el mensaje de WhatsApp
-
-Todos los extras se añaden a la sección `*✨ Extras:*` del mensaje final.
-
-**❓ Velas:** ¿tienes nombres/precios/fotos, o creo genéricos ("Vela número $15", "Pack 10 velas regulares $25") editables desde admin?
-
----
-
-## SQL maestro (te lo entrego completo al ejecutar)
-
-Resumen de lo que crearé en una sola migración:
-
-```sql
--- Roles (patrón estándar has_role + user_roles) -- si eliges opción B
--- app_settings + seeds + RLS + policies
--- customers + trigger de agregación desde las 4 tablas de pedidos
--- event_packages + seeds
--- decrement_stock() SECURITY DEFINER
--- GRANTs explícitos en cada tabla nueva
-```
-
----
-
-## Preguntas antes de arrancar
-
-1. **Admin**: ¿opción **A** (contraseña compartida) o **B** (login + rol admin)? → recomiendo B
-2. **Paquetes de eventos**: ¿me pasas precios/contenido, o placeholders editables?
-3. **Velas**: ¿datos reales o genéricos editables?
-4. **Regalos como upsell**: ¿usar todos los productos con `categoria='regalos'`, o quieres una selección curada "sugeridos para regalo"?
-
-Respóndeme y ejecuto todo en un solo bloque.
+¿Apruebas para arrancar con esta fase 1?
