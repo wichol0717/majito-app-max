@@ -62,6 +62,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   const markerRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [manualAddress, setManualAddress] = useState(value?.direccion_texto ?? "");
 
   // Carga la API de Google Maps con la key obtenida del backend
   useEffect(() => {
@@ -76,13 +77,26 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
     keyPromise
       .then(({ key }) => {
-        if (!key) throw new Error("Falta configurar la API key de Google Maps en Vercel");
+        if (!key) throw new Error("Maps no está activo en este deploy. Escribe la dirección completa para continuar.");
         return loadGoogleMaps(key);
       })
       .then(() => { if (!cancelled) setReady(true); })
-      .catch((e: any) => { if (!cancelled) setError(e?.message ?? "Error cargando Maps"); });
+      .catch((e: any) => { if (!cancelled) setError(e?.message ?? "Maps no está activo. Escribe la dirección completa para continuar."); });
     return () => { cancelled = true; };
   }, [getKey]);
+
+  const handleManualChange = (text: string) => {
+    setManualAddress(text);
+    if (!ready && text.trim().length >= 5) {
+      onChange({
+        direccion_texto: text.trim(),
+        latitud: value?.latitud ?? TUXPAN.lat,
+        longitud: value?.longitud ?? TUXPAN.lng,
+      });
+    } else if (!ready) {
+      onChange(null);
+    }
+  };
 
   // Inicializa autocomplete + mapa cuando la API está lista
   useEffect(() => {
@@ -155,22 +169,31 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         <input
           ref={inputRef}
           type="text"
-          defaultValue={value?.direccion_texto ?? ""}
+          value={ready ? undefined : manualAddress}
+          defaultValue={ready ? (value?.direccion_texto ?? "") : undefined}
           placeholder={placeholder}
           className="w-full rounded-lg border border-mocha/20 py-2 pl-9 pr-3 text-sm outline-none focus:border-shocking"
           onFocus={(e) => e.target.select()}
+          onChange={(e) => handleManualChange(e.target.value)}
         />
       </div>
-      <div
-        ref={mapDivRef}
-        className="h-52 w-full overflow-hidden rounded-lg border border-mocha/20 bg-crema"
-        aria-label="Mapa de la dirección de entrega"
-      />
+      <div className="relative">
+        <div
+          ref={mapDivRef}
+          className="h-52 w-full overflow-hidden rounded-lg border border-mocha/20 bg-crema"
+          aria-label="Mapa de la dirección de entrega"
+        />
+        {error && !ready && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-mocha/20 bg-crema px-4 text-center text-xs font-semibold text-mocha">
+            Escribe la dirección completa en el campo de arriba.
+          </div>
+        )}
+      </div>
       {!ready && !error && (
         <p className="text-[11px] text-mocha">Cargando mapa…</p>
       )}
       {error && (
-        <p className="text-[11px] text-red-600">{error}</p>
+        <p className="text-[11px] text-shocking">{error}</p>
       )}
       {value && (
         <p className="rounded bg-crema px-2 py-1 text-[11px] text-mocha">
@@ -178,7 +201,9 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           <span className="ml-2 text-[10px] opacity-70">({value.latitud.toFixed(5)}, {value.longitud.toFixed(5)})</span>
         </p>
       )}
-      <p className="text-[10px] text-mocha/70">Arrastra el marcador rojo para afinar el punto exacto.</p>
+      <p className="text-[10px] text-mocha/70">
+        {ready ? "Arrastra el marcador rojo para afinar el punto exacto." : "Con Maps inactivo, confirma la dirección por WhatsApp."}
+      </p>
     </div>
   );
 }
