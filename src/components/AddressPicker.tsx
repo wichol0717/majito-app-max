@@ -55,7 +55,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   // Carga la API de Google Maps con la key obtenida del backend
   useEffect(() => {
     let cancelled = false;
-    getKey({})
+    getKey()
       .then(({ key }) => {
         if (!key) throw new Error("Falta configurar la API key de Google Maps");
         return loadGoogleMaps(key);
