@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Gift, Minus, Plus } from "lucide-react";
 import { useCart, type Product } from "./CartContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { AddressPicker, type AddressValue } from "@/components/AddressPicker";
 
 const MENSAJES = [
   "Feliz Cumpleaños",
@@ -30,7 +30,7 @@ export function GiftModal({ product, onClose }: Props) {
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientWhatsapp, setRecipientWhatsapp] = useState("");
-  const [recipientLocation, setRecipientLocation] = useState("");
+  const [recipientAddress, setRecipientAddress] = useState<AddressValue | null>(null);
 
   if (!product) return null;
 
@@ -44,23 +44,26 @@ export function GiftModal({ product, onClose }: Props) {
     buyerWhatsapp.trim().length >= 8 &&
     recipientName.trim().length >= 2 &&
     recipientWhatsapp.trim().length >= 8 &&
-    recipientLocation.trim().length >= 5;
+    !!recipientAddress &&
+    recipientAddress.direccion_texto.length >= 5;
 
   const confirmar = () => {
-    if (!formValido) return;
+    if (!formValido || !recipientAddress) return;
     addGift(product, qty, mensaje, {
       buyerName: buyerName.trim(),
       buyerWhatsapp: buyerWhatsapp.trim(),
       recipientName: recipientName.trim(),
       recipientWhatsapp: recipientWhatsapp.trim(),
-      recipientLocation: recipientLocation.trim(),
+      recipientLocation: recipientAddress.direccion_texto,
+      recipientLat: recipientAddress.latitud,
+      recipientLng: recipientAddress.longitud,
     });
     setQty(1);
     setBuyerName("");
     setBuyerWhatsapp("");
     setRecipientName("");
     setRecipientWhatsapp("");
-    setRecipientLocation("");
+    setRecipientAddress(null);
     onClose();
   };
 
@@ -162,10 +165,12 @@ export function GiftModal({ product, onClose }: Props) {
               <Input id="recipientWhatsapp" value={recipientWhatsapp} onChange={(e) => setRecipientWhatsapp(e.target.value)} maxLength={20} placeholder="Ej. 7831112233" inputMode="tel" />
             </div>
           </div>
-          <div>
-            <Label htmlFor="recipientLocation" className="text-xs">Ubicación / dirección de entrega *</Label>
-            <Textarea id="recipientLocation" value={recipientLocation} onChange={(e) => setRecipientLocation(e.target.value)} rows={2} maxLength={300} placeholder="Calle, número, colonia, referencias, ciudad" />
-          </div>
+          <AddressPicker
+            value={recipientAddress}
+            onChange={setRecipientAddress}
+            label="Ubicación exacta del festejado *"
+            placeholder="Busca la dirección donde entregar"
+          />
           <p className="rounded-lg bg-shocking/10 p-2 text-[11px] font-semibold text-shocking">
             🚚 Este regalo se envía a domicilio del festejado. Se suma un costo de envío de <strong>${ENVIO_COSTO.toFixed(2)}</strong> por cada regalo.
           </p>
