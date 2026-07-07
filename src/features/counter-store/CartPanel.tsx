@@ -601,6 +601,12 @@ export function CartPanel() {
           <span>Subtotal</span>
           <span>${subtotal.toFixed(2)}</span>
         </div>
+        {descuento > 0 && cuponAplicado && (
+          <div className="flex justify-between text-green-600">
+            <span>Cupón {cuponAplicado.code} (-{cuponAplicado.pct}%)</span>
+            <span>-${descuento.toFixed(2)}</span>
+          </div>
+        )}
         {enviosCobrables > 0 && (
           <div className="flex justify-between text-foreground/70">
             <span>Envíos ({enviosCobrables} × ${ENVIO_COSTO.toFixed(2)})</span>
@@ -611,6 +617,38 @@ export function CartPanel() {
           <span>Total</span>
           <span>${total.toFixed(2)}</span>
         </div>
+      </div>
+
+      {/* Cupón */}
+      <div className="rounded-xl border border-sunset/60 bg-sunset/20 p-3">
+        <p className="mb-2 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-shocking">
+          <Ticket className="h-3 w-3"/> ¿Tienes un cupón?
+        </p>
+        {cuponAplicado ? (
+          <div className="flex items-center justify-between rounded-lg bg-white p-2 text-xs">
+            <span className="font-mono font-bold text-green-600">{cuponAplicado.code} · -{cuponAplicado.pct}%</span>
+            <button type="button" onClick={quitarCupon} className="flex items-center gap-1 text-mocha hover:text-shocking">
+              <X className="h-3 w-3"/> Quitar
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={cuponInput}
+              onChange={(e) => { setCuponInput(e.target.value.toUpperCase()); setCuponMsg(null); }}
+              placeholder="Escribe tu código"
+              className="flex-1 rounded border border-mocha/20 px-2 py-1.5 text-xs font-mono uppercase"
+              maxLength={20}
+            />
+            <button type="button" onClick={aplicarCupon}
+              className="rounded bg-shocking px-3 py-1.5 text-xs font-bold text-white">
+              Aplicar
+            </button>
+          </div>
+        )}
+        {cuponMsg && (
+          <p className={`mt-1 text-[11px] ${cuponAplicado ? "text-green-600" : "text-red-600"}`}>{cuponMsg}</p>
+        )}
       </div>
 
       {metodo === "efectivo" ? (
