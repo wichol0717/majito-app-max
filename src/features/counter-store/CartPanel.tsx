@@ -524,7 +524,7 @@ export function CartPanel() {
           <label className="mt-2 flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-shocking/40 bg-shocking/5 p-4 text-xs font-semibold text-shocking hover:bg-shocking/10">
             {subiendo ? <Loader2 className="h-4 w-4 animate-spin"/> : comprobanteUrl ? <CheckCircle2 className="h-4 w-4"/> : <Upload className="h-4 w-4"/>}
             {subiendo ? "Subiendo…" : comprobanteUrl ? "Comprobante cargado — cambiar" : "Subir comprobante (foto)"}
-            <input type="file" accept="image/*" capture="environment" className="hidden"
+            <input type="file" accept="image/*" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) { setComprobanteFile(f); subirComprobante(f); } }}
             />
           </label>
