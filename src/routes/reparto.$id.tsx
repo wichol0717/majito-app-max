@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Phone, MapPin, CheckCircle2, Package, DollarSign, Loader2, QrCode } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/api/supabase";
+import { markOrderDelivered } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/reparto/$id")({
   head: () => ({
@@ -66,6 +68,7 @@ function RepartoView() {
   const [loading, setLoading] = useState(true);
   const [confirmando, setConfirmando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const mark = useServerFn(markOrderDelivered);
 
   async function reload() {
     const p = await fetchPedido(id);
@@ -76,15 +79,14 @@ function RepartoView() {
   async function marcarEntregado() {
     if (!pedido) return;
     setConfirmando(true);
-    const { error } = await (supabase.from(pedido.tabla) as any)
-      .update({ delivery_status: "entregado", status: "DELIVERED" })
-      .eq("id", pedido.id);
-    setConfirmando(false);
-    if (error) {
-      setMsg("No se pudo marcar. Pide a Majito confirmarlo desde el panel.");
-    } else {
+    try {
+      await mark({ data: { id: pedido.id, tabla: pedido.tabla } });
       setMsg("¡Entrega confirmada!");
-      reload();
+      await reload();
+    } catch {
+      setMsg("No se pudo marcar. Pide a Majito confirmarlo desde el panel.");
+    } finally {
+      setConfirmando(false);
     }
   }
 
