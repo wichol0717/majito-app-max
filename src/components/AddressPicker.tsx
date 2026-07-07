@@ -27,20 +27,31 @@ const TUXPAN = { lat: 20.9569, lng: -97.4083 };
 
 // Loader singleton (solo un <script> en toda la sesión)
 let loaderPromise: Promise<void> | null = null;
-function loadGoogleMaps(apiKey: string): Promise<void> {
+function loadGoogleMaps(apiKey: string): Promise<any> {
   if (typeof window === "undefined") return Promise.resolve();
-  if ((window as any).google?.maps) return Promise.resolve();
+  if ((window as any).google?.maps?.importLibrary) return ensureMapsLibraries();
   if (loaderPromise) return loaderPromise;
   loaderPromise = new Promise((resolve, reject) => {
-    (window as any).__majitoInitMap = () => resolve();
+    (window as any).__majitoInitMap = () => {
+      ensureMapsLibraries().then(resolve).catch(reject);
+    };
     const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__majitoInitMap&language=es&region=MX`;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=weekly&loading=async&callback=__majitoInitMap&language=es&region=MX&channel=majito_app`;
     s.async = true;
     s.defer = true;
     s.onerror = () => reject(new Error("No se pudo cargar Google Maps"));
     document.head.appendChild(s);
   });
   return loaderPromise;
+}
+
+async function ensureMapsLibraries() {
+  const g = (window as any).google;
+  await Promise.all([
+    g.maps.importLibrary("maps"),
+    g.maps.importLibrary("places"),
+    g.maps.importLibrary("geocoding"),
+  ]);
 }
 
 export function AddressPicker({ value, onChange, label = "Dirección de entrega *", placeholder = "Busca calle, colonia o referencia" }: Props) {
@@ -55,9 +66,17 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   // Carga la API de Google Maps con la key obtenida del backend
   useEffect(() => {
     let cancelled = false;
-    getKey()
+    const browserKey =
+      import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY ||
+      import.meta.env.VITE_GOOGLE_API_KEY ||
+      import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
+      "";
+
+    const keyPromise = browserKey ? Promise.resolve({ key: browserKey }) : getKey();
+
+    keyPromise
       .then(({ key }) => {
-        if (!key) throw new Error("Falta configurar la API key de Google Maps");
+        if (!key) throw new Error("Falta configurar la API key de Google Maps en Vercel");
         return loadGoogleMaps(key);
       })
       .then(() => { if (!cancelled) setReady(true); })

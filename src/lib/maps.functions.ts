@@ -6,6 +6,11 @@ import { createServerFn } from "@tanstack/react-start";
  * al cliente sin riesgo — es equivalente a una clave publishable.
  */
 export const getGoogleMapsKey = createServerFn({ method: "GET" }).handler(async () => {
-  const key = process.env.GOOGLE_MAPS_BROWSER_KEY || process.env.GOOGLE_API_KEY || "";
+  const key =
+    process.env.GOOGLE_MAPS_BROWSER_KEY ||
+    process.env.VITE_GOOGLE_MAPS_BROWSER_KEY ||
+    process.env.GOOGLE_API_KEY ||
+    process.env.VITE_GOOGLE_API_KEY ||
+    "";
   return { key };
 });
