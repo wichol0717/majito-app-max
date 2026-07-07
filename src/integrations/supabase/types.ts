@@ -456,6 +456,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_customer_origen: {
+        Args: { _cupon: string; _origen: string; _whatsapp: string }
+        Returns: undefined
+      }
       upsert_customer_from_order: {
         Args: { _amount: number; _name: string; _whatsapp: string }
         Returns: undefined
