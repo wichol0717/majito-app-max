@@ -150,7 +150,7 @@ export const adminListOrders = createServerFn({ method: "POST" })
 export const adminApproveOrder = createServerFn({ method: "POST" })
   .inputValidator((d: { password: string; id: string; tabla: Tabla }) => d)
   .handler(async ({ data }) => {
-    const s = await ensureAdmin(data.password);
+    const s: any = await ensureAdmin(data.password);
     const { error } = await s.from(data.tabla)
       .update({ status: "VERIFIED", delivery_status: "en_cocina" })
       .eq("id", data.id);
@@ -161,7 +161,7 @@ export const adminApproveOrder = createServerFn({ method: "POST" })
 export const adminAdvanceDelivery = createServerFn({ method: "POST" })
   .inputValidator((d: { password: string; id: string; tabla: Tabla; current: string }) => d)
   .handler(async ({ data }) => {
-    const s = await ensureAdmin(data.password);
+    const s: any = await ensureAdmin(data.password);
     const next = AVANCE[data.current] ?? "en_cocina";
     const patch: any = { delivery_status: next };
     if (next === "entregado") patch.status = "DELIVERED";
@@ -173,7 +173,7 @@ export const adminAdvanceDelivery = createServerFn({ method: "POST" })
 export const adminCancelOrder = createServerFn({ method: "POST" })
   .inputValidator((d: { password: string; id: string; tabla: Tabla }) => d)
   .handler(async ({ data }) => {
-    const s = await ensureAdmin(data.password);
+    const s: any = await ensureAdmin(data.password);
     const { error } = await s.from(data.tabla).update({ status: "CANCELLED" }).eq("id", data.id);
     if (error) throw error;
     return { ok: true };
