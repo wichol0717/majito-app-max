@@ -106,13 +106,12 @@ function TarjetaRegalo() {
           >
             Ver estado de tu regalo <ArrowRight className="h-4 w-4"/>
           </Link>
-          <Link
-            to="/regalos"
-            search={{ promo: "REGALO5" } as never}
+          <a
+            href="/regalos?promo=REGALO5"
             className="flex items-center justify-center gap-2 rounded-full bg-sweet-pink px-4 py-3 text-sm font-bold text-foreground shadow hover:bg-sweet-pink/80"
           >
             <Gift className="h-4 w-4"/> ¡Regala tú también! 5% OFF con REGALO5
-          </Link>
+          </a>
         </div>
 
         <p className="mt-8 text-center text-[11px] text-mocha">
