@@ -17,6 +17,7 @@ import { Route as CocinaRouteImport } from './routes/cocina'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as PedidoIdRouteImport } from './routes/pedido.$id'
 import { Route as AdminPaquetesRouteImport } from './routes/admin.paquetes'
 import { Route as AdminInventarioRouteImport } from './routes/admin.inventario'
 import { Route as AdminConfiguracionRouteImport } from './routes/admin.configuracion'
@@ -62,6 +63,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const PedidoIdRoute = PedidoIdRouteImport.update({
+  id: '/pedido/$id',
+  path: '/pedido/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminPaquetesRoute = AdminPaquetesRouteImport.update({
   id: '/paquetes',
   path: '/paquetes',
@@ -95,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/admin/configuracion': typeof AdminConfiguracionRoute
   '/admin/inventario': typeof AdminInventarioRoute
   '/admin/paquetes': typeof AdminPaquetesRoute
+  '/pedido/$id': typeof PedidoIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/admin/configuracion': typeof AdminConfiguracionRoute
   '/admin/inventario': typeof AdminInventarioRoute
   '/admin/paquetes': typeof AdminPaquetesRoute
+  '/pedido/$id': typeof PedidoIdRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/admin/configuracion': typeof AdminConfiguracionRoute
   '/admin/inventario': typeof AdminInventarioRoute
   '/admin/paquetes': typeof AdminPaquetesRoute
+  '/pedido/$id': typeof PedidoIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/inventario'
     | '/admin/paquetes'
+    | '/pedido/$id'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/inventario'
     | '/admin/paquetes'
+    | '/pedido/$id'
     | '/admin'
   id:
     | '__root__'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/admin/configuracion'
     | '/admin/inventario'
     | '/admin/paquetes'
+    | '/pedido/$id'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   MostradorRoute: typeof MostradorRoute
   PersonalizadosRoute: typeof PersonalizadosRoute
   RegalosRoute: typeof RegalosRoute
+  PedidoIdRoute: typeof PedidoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -237,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/pedido/$id': {
+      id: '/pedido/$id'
+      path: '/pedido/$id'
+      fullPath: '/pedido/$id'
+      preLoaderRoute: typeof PedidoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/paquetes': {
       id: '/admin/paquetes'
       path: '/paquetes'
@@ -294,6 +314,7 @@ const rootRouteChildren: RootRouteChildren = {
   MostradorRoute: MostradorRoute,
   PersonalizadosRoute: PersonalizadosRoute,
   RegalosRoute: RegalosRoute,
+  PedidoIdRoute: PedidoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

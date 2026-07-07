@@ -103,3 +103,78 @@ export const adminUpsertPackage = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+// ---------------- PEDIDOS (mostrador + regalos) ----------------
+
+type Tabla = "counter_orders" | "gift_orders";
+const AVANCE: Record<string, string> = {
+  validando_pago: "en_cocina",
+  en_cocina: "listo",
+  listo: "en_camino",
+  en_camino: "entregado",
+  entregado: "entregado",
+};
+
+export const adminListOrders = createServerFn({ method: "POST" })
+  .inputValidator((d: { password: string }) => d)
+  .handler(async ({ data }) => {
+    const s = await ensureAdmin(data.password);
+    const [c, g] = await Promise.all([
+      s.from("counter_orders").select("*").order("created_at", { ascending: false }).limit(200),
+      s.from("gift_orders").select("*").order("created_at", { ascending: false }).limit(200),
+    ]);
+    if (c.error) throw c.error;
+    if (g.error) throw g.error;
+    const norm = (r: any, tabla: Tabla) => ({
+      tabla,
+      id: r.id,
+      cliente: r.customer_name,
+      whatsapp: r.customer_whatsapp,
+      total: Number(r.total_paid),
+      metodo: r.payment_method,
+      status: r.status,
+      delivery_status: r.delivery_status ?? "validando_pago",
+      direccion_texto: r.direccion_texto,
+      latitud: r.latitud,
+      longitud: r.longitud,
+      payment_reference: r.payment_reference,
+      proof_image_url: r.proof_image_url,
+      created_at: r.created_at,
+    });
+    return [
+      ...(c.data ?? []).map((r) => norm(r, "counter_orders")),
+      ...(g.data ?? []).map((r) => norm(r, "gift_orders")),
+    ].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  });
+
+export const adminApproveOrder = createServerFn({ method: "POST" })
+  .inputValidator((d: { password: string; id: string; tabla: Tabla }) => d)
+  .handler(async ({ data }) => {
+    const s = await ensureAdmin(data.password);
+    const { error } = await s.from(data.tabla)
+      .update({ status: "VERIFIED", delivery_status: "en_cocina" })
+      .eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const adminAdvanceDelivery = createServerFn({ method: "POST" })
+  .inputValidator((d: { password: string; id: string; tabla: Tabla; current: string }) => d)
+  .handler(async ({ data }) => {
+    const s = await ensureAdmin(data.password);
+    const next = AVANCE[data.current] ?? "en_cocina";
+    const patch: any = { delivery_status: next };
+    if (next === "entregado") patch.status = "DELIVERED";
+    const { error } = await s.from(data.tabla).update(patch).eq("id", data.id);
+    if (error) throw error;
+    return { ok: true, next };
+  });
+
+export const adminCancelOrder = createServerFn({ method: "POST" })
+  .inputValidator((d: { password: string; id: string; tabla: Tabla }) => d)
+  .handler(async ({ data }) => {
+    const s = await ensureAdmin(data.password);
+    const { error } = await s.from(data.tabla).update({ status: "CANCELLED" }).eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
