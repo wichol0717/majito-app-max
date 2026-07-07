@@ -69,6 +69,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     let cancelled = false;
     const browserKey =
       import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY ||
+      import.meta.env.VITE_GOOGLE_MAPS_API_KEY ||
       import.meta.env.VITE_GOOGLE_API_KEY ||
       import.meta.env.VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY ||
       "";

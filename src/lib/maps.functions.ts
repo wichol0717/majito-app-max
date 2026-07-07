@@ -8,7 +8,9 @@ import { createServerFn } from "@tanstack/react-start";
 export const getGoogleMapsKey = createServerFn({ method: "GET" }).handler(async () => {
   const key =
     process.env.GOOGLE_MAPS_BROWSER_KEY ||
+    process.env.GOOGLE_MAPS_API_KEY ||
     process.env.VITE_GOOGLE_MAPS_BROWSER_KEY ||
+    process.env.VITE_GOOGLE_MAPS_API_KEY ||
     process.env.GOOGLE_API_KEY ||
     process.env.VITE_GOOGLE_API_KEY ||
     "";
