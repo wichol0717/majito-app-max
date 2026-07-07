@@ -17,6 +17,8 @@ import { Route as CocinaRouteImport } from './routes/cocina'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as RepartoIdRouteImport } from './routes/reparto.$id'
+import { Route as RegaloIdRouteImport } from './routes/regalo.$id'
 import { Route as PedidoIdRouteImport } from './routes/pedido.$id'
 import { Route as AdminPedidosRouteImport } from './routes/admin.pedidos'
 import { Route as AdminPaquetesRouteImport } from './routes/admin.paquetes'
@@ -64,6 +66,16 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const RepartoIdRoute = RepartoIdRouteImport.update({
+  id: '/reparto/$id',
+  path: '/reparto/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegaloIdRoute = RegaloIdRouteImport.update({
+  id: '/regalo/$id',
+  path: '/regalo/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PedidoIdRoute = PedidoIdRouteImport.update({
   id: '/pedido/$id',
   path: '/pedido/$id',
@@ -109,6 +121,8 @@ export interface FileRoutesByFullPath {
   '/admin/paquetes': typeof AdminPaquetesRoute
   '/admin/pedidos': typeof AdminPedidosRoute
   '/pedido/$id': typeof PedidoIdRoute
+  '/regalo/$id': typeof RegaloIdRoute
+  '/reparto/$id': typeof RepartoIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -124,6 +138,8 @@ export interface FileRoutesByTo {
   '/admin/paquetes': typeof AdminPaquetesRoute
   '/admin/pedidos': typeof AdminPedidosRoute
   '/pedido/$id': typeof PedidoIdRoute
+  '/regalo/$id': typeof RegaloIdRoute
+  '/reparto/$id': typeof RepartoIdRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -141,6 +157,8 @@ export interface FileRoutesById {
   '/admin/paquetes': typeof AdminPaquetesRoute
   '/admin/pedidos': typeof AdminPedidosRoute
   '/pedido/$id': typeof PedidoIdRoute
+  '/regalo/$id': typeof RegaloIdRoute
+  '/reparto/$id': typeof RepartoIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -159,6 +177,8 @@ export interface FileRouteTypes {
     | '/admin/paquetes'
     | '/admin/pedidos'
     | '/pedido/$id'
+    | '/regalo/$id'
+    | '/reparto/$id'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -174,6 +194,8 @@ export interface FileRouteTypes {
     | '/admin/paquetes'
     | '/admin/pedidos'
     | '/pedido/$id'
+    | '/regalo/$id'
+    | '/reparto/$id'
     | '/admin'
   id:
     | '__root__'
@@ -190,6 +212,8 @@ export interface FileRouteTypes {
     | '/admin/paquetes'
     | '/admin/pedidos'
     | '/pedido/$id'
+    | '/regalo/$id'
+    | '/reparto/$id'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -202,6 +226,8 @@ export interface RootRouteChildren {
   PersonalizadosRoute: typeof PersonalizadosRoute
   RegalosRoute: typeof RegalosRoute
   PedidoIdRoute: typeof PedidoIdRoute
+  RegaloIdRoute: typeof RegaloIdRoute
+  RepartoIdRoute: typeof RepartoIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -261,6 +287,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/reparto/$id': {
+      id: '/reparto/$id'
+      path: '/reparto/$id'
+      fullPath: '/reparto/$id'
+      preLoaderRoute: typeof RepartoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/regalo/$id': {
+      id: '/regalo/$id'
+      path: '/regalo/$id'
+      fullPath: '/regalo/$id'
+      preLoaderRoute: typeof RegaloIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/pedido/$id': {
       id: '/pedido/$id'
@@ -336,6 +376,8 @@ const rootRouteChildren: RootRouteChildren = {
   PersonalizadosRoute: PersonalizadosRoute,
   RegalosRoute: RegalosRoute,
   PedidoIdRoute: PedidoIdRoute,
+  RegaloIdRoute: RegaloIdRoute,
+  RepartoIdRoute: RepartoIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

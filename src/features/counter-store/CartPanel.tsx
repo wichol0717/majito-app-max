@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Gift, Minus, Plus, Trash2, MessageCircle, Cake, Flame, Sparkles, Upload, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { Gift, Minus, Plus, Trash2, MessageCircle, Cake, Flame, Sparkles, Upload, Loader2, Copy, CheckCircle2, Ticket, X } from "lucide-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useCart, type Product } from "./CartContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { supabase } from "@/api/supabase";
 import { AddressPicker, type AddressValue } from "@/components/AddressPicker";
+import { findCoupon, parseCupones, readCupon, readOrigen, saveCupon, clearOrigenYCupon, type Cupon } from "@/lib/coupons";
 
 function generarReferencia() {
   const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -21,6 +22,7 @@ export function CartPanel() {
   const navigate = useNavigate();
   const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
   const WHATSAPP_NUM = String(settings.whatsapp_number);
+  const cuponesDisponibles: Cupon[] = useMemo(() => parseCupones((settings as any).cupones), [settings]);
 
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
   const [direccion, setDireccion] = useState<AddressValue | null>(null);
@@ -38,6 +40,33 @@ export function CartPanel() {
   const [enviando, setEnviando] = useState(false);
   const [refCopiada, setRefCopiada] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Cupón + origen
+  const [cuponInput, setCuponInput] = useState("");
+  const [cuponAplicado, setCuponAplicado] = useState<Cupon | null>(null);
+  const [cuponMsg, setCuponMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = readCupon();
+    if (stored && !cuponAplicado) {
+      const found = findCoupon(cuponesDisponibles, stored);
+      if (found) { setCuponAplicado(found); setCuponInput(found.code); }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cuponesDisponibles.length]);
+
+  function aplicarCupon() {
+    const found = findCoupon(cuponesDisponibles, cuponInput);
+    if (!found) { setCuponMsg("Cupón no válido"); setCuponAplicado(null); return; }
+    setCuponAplicado(found);
+    saveCupon(found.code);
+    setCuponMsg(`${found.pct}% aplicado`);
+  }
+  function quitarCupon() {
+    setCuponAplicado(null);
+    setCuponInput("");
+    setCuponMsg(null);
+  }
 
   // Upsell state
   const [velaProd, setVelaProd] = useState<Product | null>(null);
@@ -68,7 +97,8 @@ export function CartPanel() {
 
   const enviosCobrables = direccionesEnvio.size;
   const costoEnviosTotal = enviosCobrables * ENVIO_COSTO;
-  const total = subtotal + costoEnviosTotal;
+  const descuento = cuponAplicado ? +(subtotal * (cuponAplicado.pct / 100)).toFixed(2) : 0;
+  const total = Math.max(0, subtotal - descuento) + costoEnviosTotal;
 
   const hayMostrador = items.some((i) => !i.isGift);
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
@@ -137,6 +167,9 @@ export function CartPanel() {
     }
 
     lineas.push(`Subtotal: $${subtotal.toFixed(2)}`);
+    if (descuento > 0 && cuponAplicado) {
+      lineas.push(`Cupón ${cuponAplicado.code} (-${cuponAplicado.pct}%): -$${descuento.toFixed(2)}`);
+    }
     if (enviosCobrables > 0) {
       lineas.push(`Envío (${enviosCobrables} × $${ENVIO_COSTO.toFixed(2)}): $${costoEnviosTotal.toFixed(2)}`);
     }
@@ -148,7 +181,7 @@ export function CartPanel() {
       lineas.push("¡Hola! Aquí está mi pedido. En un momento adjunto mi comprobante de pago.");
     }
     return lineas.join("\n");
-  }, [items, subtotal, total, entrega, direccion, ENVIO_COSTO, enviosCobrables, costoEnviosTotal, metodo, referencia, comprobanteUrl]);
+  }, [items, subtotal, total, descuento, cuponAplicado, entrega, direccion, ENVIO_COSTO, enviosCobrables, costoEnviosTotal, metodo, referencia, comprobanteUrl]);
 
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(mensajeWhats)}`;
 
@@ -193,7 +226,9 @@ export function CartPanel() {
         const envioCostoMostrador =
           entrega === "envio" && direccion ? ENVIO_COSTO : 0;
         if (envioCostoMostrador > 0 && direccion) yaCobradas.add(normalizarDir(direccion.direccion_texto));
-        const totalMostrador = regularItems.reduce((s, i) => s + i.quantity * Number(i.product.precio), 0) + envioCostoMostrador;
+        const subtMostrador = regularItems.reduce((s, i) => s + i.quantity * Number(i.product.precio), 0);
+        const descMostrador = cuponAplicado ? +(subtMostrador * (cuponAplicado.pct / 100)).toFixed(2) : 0;
+        const totalMostrador = Math.max(0, subtMostrador - descMostrador) + envioCostoMostrador;
         const payload: any = {
           customer_name: buyerName.trim(),
           customer_whatsapp: buyerWhatsapp.trim(),
@@ -204,6 +239,8 @@ export function CartPanel() {
           status: "PENDING",
           delivery_status: "validando_pago",
           envio_costo: envioCostoMostrador,
+          cupon_codigo: cuponAplicado?.code ?? null,
+          descuento: descMostrador,
           direccion_texto: entrega === "envio" && direccion ? direccion.direccion_texto : null,
           latitud: entrega === "envio" && direccion ? direccion.latitud : null,
           longitud: entrega === "envio" && direccion ? direccion.longitud : null,
@@ -219,7 +256,9 @@ export function CartPanel() {
         const cobraEnvio = key && !yaCobradas.has(key);
         if (cobraEnvio) yaCobradas.add(key);
         const envio = cobraEnvio ? ENVIO_COSTO : 0;
-        const totalRegalo = g.quantity * Number(g.product.precio) + envio;
+        const subtRegalo = g.quantity * Number(g.product.precio);
+        const descRegalo = cuponAplicado ? +(subtRegalo * (cuponAplicado.pct / 100)).toFixed(2) : 0;
+        const totalRegalo = Math.max(0, subtRegalo - descRegalo) + envio;
         const payload: any = {
           customer_name: g.giftDetails?.buyerName ?? buyerName.trim(),
           customer_whatsapp: g.giftDetails?.buyerWhatsapp ?? buyerWhatsapp.trim(),
@@ -230,9 +269,14 @@ export function CartPanel() {
           status: "PENDING",
           delivery_status: "validando_pago",
           envio_costo: envio,
+          cupon_codigo: cuponAplicado?.code ?? null,
+          descuento: descRegalo,
           direccion_texto: g.giftDetails?.recipientLocation ?? null,
           latitud: g.giftDetails?.recipientLat ?? null,
           longitud: g.giftDetails?.recipientLng ?? null,
+          mensaje: g.giftMessage ?? null,
+          recipient_name: g.giftDetails?.recipientName ?? null,
+          recipient_whatsapp: g.giftDetails?.recipientWhatsapp ?? null,
           gift_items: [{
             producto: g.product.nombre,
             cantidad: g.quantity,
@@ -247,7 +291,21 @@ export function CartPanel() {
         if (!primerId) primerId = data?.id ?? null;
       }
 
+      // Origen + cupón del cliente
+      try {
+        const origen = readOrigen();
+        const wa = buyerWhatsapp.trim();
+        if (wa) {
+          await supabase.rpc("set_customer_origen", {
+            _whatsapp: wa,
+            _origen: origen,
+            _cupon: cuponAplicado?.code ?? null,
+          } as any);
+        }
+      } catch { /* ignore */ }
+
       clear();
+      clearOrigenYCupon();
       if (primerId) {
         navigate({ to: "/pedido/$id", params: { id: primerId } });
       }
@@ -543,6 +601,12 @@ export function CartPanel() {
           <span>Subtotal</span>
           <span>${subtotal.toFixed(2)}</span>
         </div>
+        {descuento > 0 && cuponAplicado && (
+          <div className="flex justify-between text-green-600">
+            <span>Cupón {cuponAplicado.code} (-{cuponAplicado.pct}%)</span>
+            <span>-${descuento.toFixed(2)}</span>
+          </div>
+        )}
         {enviosCobrables > 0 && (
           <div className="flex justify-between text-foreground/70">
             <span>Envíos ({enviosCobrables} × ${ENVIO_COSTO.toFixed(2)})</span>
@@ -553,6 +617,38 @@ export function CartPanel() {
           <span>Total</span>
           <span>${total.toFixed(2)}</span>
         </div>
+      </div>
+
+      {/* Cupón */}
+      <div className="rounded-xl border border-sunset/60 bg-sunset/20 p-3">
+        <p className="mb-2 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-shocking">
+          <Ticket className="h-3 w-3"/> ¿Tienes un cupón?
+        </p>
+        {cuponAplicado ? (
+          <div className="flex items-center justify-between rounded-lg bg-white p-2 text-xs">
+            <span className="font-mono font-bold text-green-600">{cuponAplicado.code} · -{cuponAplicado.pct}%</span>
+            <button type="button" onClick={quitarCupon} className="flex items-center gap-1 text-mocha hover:text-shocking">
+              <X className="h-3 w-3"/> Quitar
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={cuponInput}
+              onChange={(e) => { setCuponInput(e.target.value.toUpperCase()); setCuponMsg(null); }}
+              placeholder="Escribe tu código"
+              className="flex-1 rounded border border-mocha/20 px-2 py-1.5 text-xs font-mono uppercase"
+              maxLength={20}
+            />
+            <button type="button" onClick={aplicarCupon}
+              className="rounded bg-shocking px-3 py-1.5 text-xs font-bold text-white">
+              Aplicar
+            </button>
+          </div>
+        )}
+        {cuponMsg && (
+          <p className={`mt-1 text-[11px] ${cuponAplicado ? "text-green-600" : "text-red-600"}`}>{cuponMsg}</p>
+        )}
       </div>
 
       {metodo === "efectivo" ? (

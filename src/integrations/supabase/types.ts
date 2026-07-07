@@ -38,39 +38,66 @@ export type Database = {
       counter_orders: {
         Row: {
           created_at: string
+          cupon_codigo: string | null
           customer_name: string
           customer_whatsapp: string
           delivery_address: string | null
           delivery_mode: string | null
+          delivery_status: string | null
+          descuento: number | null
+          direccion_texto: string | null
+          envio_costo: number | null
           id: string
           items: Json
+          latitud: number | null
+          longitud: number | null
+          notas: string | null
           payment_method: string
+          payment_reference: string | null
           proof_image_url: string | null
           status: string
           total_paid: number
         }
         Insert: {
           created_at?: string
+          cupon_codigo?: string | null
           customer_name: string
           customer_whatsapp: string
           delivery_address?: string | null
           delivery_mode?: string | null
+          delivery_status?: string | null
+          descuento?: number | null
+          direccion_texto?: string | null
+          envio_costo?: number | null
           id?: string
           items?: Json
+          latitud?: number | null
+          longitud?: number | null
+          notas?: string | null
           payment_method: string
+          payment_reference?: string | null
           proof_image_url?: string | null
           status?: string
           total_paid: number
         }
         Update: {
           created_at?: string
+          cupon_codigo?: string | null
           customer_name?: string
           customer_whatsapp?: string
           delivery_address?: string | null
           delivery_mode?: string | null
+          delivery_status?: string | null
+          descuento?: number | null
+          direccion_texto?: string | null
+          envio_costo?: number | null
           id?: string
           items?: Json
+          latitud?: number | null
+          longitud?: number | null
+          notas?: string | null
           payment_method?: string
+          payment_reference?: string | null
           proof_image_url?: string | null
           status?: string
           total_paid?: number
@@ -128,11 +155,14 @@ export type Database = {
       customers: {
         Row: {
           created_at: string
+          cupon_activo: string | null
+          email: string | null
           first_order_at: string
           id: string
           last_order_at: string
           name: string | null
           notes: string | null
+          origen: string | null
           tags: string[] | null
           total_orders: number
           total_spent: number
@@ -140,11 +170,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          cupon_activo?: string | null
+          email?: string | null
           first_order_at?: string
           id?: string
           last_order_at?: string
           name?: string | null
           notes?: string | null
+          origen?: string | null
           tags?: string[] | null
           total_orders?: number
           total_spent?: number
@@ -152,11 +185,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          cupon_activo?: string | null
+          email?: string | null
           first_order_at?: string
           id?: string
           last_order_at?: string
           name?: string | null
           notes?: string | null
+          origen?: string | null
           tags?: string[] | null
           total_orders?: number
           total_spent?: number
@@ -270,40 +306,88 @@ export type Database = {
           buyer_name: string
           buyer_whatsapp: string
           created_at: string
+          cupon_codigo: string | null
+          customer_name: string | null
+          customer_whatsapp: string | null
+          delivery_status: string | null
+          descuento: number | null
+          direccion_texto: string | null
+          emoji: string | null
+          envio_costo: number | null
+          gift_items: Json | null
           id: string
           items: Json
+          latitud: number | null
+          longitud: number | null
+          mensaje: string | null
           message: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          proof_image_url: string | null
           recipient_location: string
           recipient_name: string
           recipient_whatsapp: string | null
           status: string
           total: number
+          total_paid: number | null
         }
         Insert: {
           buyer_name: string
           buyer_whatsapp: string
           created_at?: string
+          cupon_codigo?: string | null
+          customer_name?: string | null
+          customer_whatsapp?: string | null
+          delivery_status?: string | null
+          descuento?: number | null
+          direccion_texto?: string | null
+          emoji?: string | null
+          envio_costo?: number | null
+          gift_items?: Json | null
           id?: string
           items?: Json
+          latitud?: number | null
+          longitud?: number | null
+          mensaje?: string | null
           message?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          proof_image_url?: string | null
           recipient_location: string
           recipient_name: string
           recipient_whatsapp?: string | null
           status?: string
           total: number
+          total_paid?: number | null
         }
         Update: {
           buyer_name?: string
           buyer_whatsapp?: string
           created_at?: string
+          cupon_codigo?: string | null
+          customer_name?: string | null
+          customer_whatsapp?: string | null
+          delivery_status?: string | null
+          descuento?: number | null
+          direccion_texto?: string | null
+          emoji?: string | null
+          envio_costo?: number | null
+          gift_items?: Json | null
           id?: string
           items?: Json
+          latitud?: number | null
+          longitud?: number | null
+          mensaje?: string | null
           message?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          proof_image_url?: string | null
           recipient_location?: string
           recipient_name?: string
           recipient_whatsapp?: string | null
           status?: string
           total?: number
+          total_paid?: number | null
         }
         Relationships: []
       }
@@ -371,6 +455,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_customer_origen: {
+        Args: { _cupon: string; _origen: string; _whatsapp: string }
+        Returns: undefined
       }
       upsert_customer_from_order: {
         Args: { _amount: number; _name: string; _whatsapp: string }

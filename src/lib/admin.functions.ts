@@ -178,3 +178,17 @@ export const adminCancelOrder = createServerFn({ method: "POST" })
     if (error) throw error;
     return { ok: true };
   });
+
+// ---------- Público: repartidor (link privado por WhatsApp) ----------
+export const markOrderDelivered = createServerFn({ method: "POST" })
+  .inputValidator((d: { id: string; tabla: Tabla }) => d)
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const s: any = supabaseAdmin;
+    const { error } = await s
+      .from(data.tabla)
+      .update({ delivery_status: "entregado", status: "DELIVERED" })
+      .eq("id", data.id);
+    if (error) throw error;
+    return { ok: true };
+  });
