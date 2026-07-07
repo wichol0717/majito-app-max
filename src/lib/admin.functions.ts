@@ -18,8 +18,8 @@ export const verifyAdminPassword = createServerFn({ method: "POST" })
 
 async function ensureAdmin(password: string) {
   if (!checkPassword(password)) throw new Error("Contraseña incorrecta");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return supabaseAdmin;
+  const { majitoAdmin } = await import("@/integrations/supabase/majito-admin.server");
+  return majitoAdmin;
 }
 
 // SETTINGS
@@ -183,8 +183,8 @@ export const adminCancelOrder = createServerFn({ method: "POST" })
 export const markOrderDelivered = createServerFn({ method: "POST" })
   .inputValidator((d: { id: string; tabla: Tabla }) => d)
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const s: any = supabaseAdmin;
+    const { majitoAdmin } = await import("@/integrations/supabase/majito-admin.server");
+    const s: any = majitoAdmin;
     const { error } = await s
       .from(data.tabla)
       .update({ delivery_status: "entregado", status: "DELIVERED" })
