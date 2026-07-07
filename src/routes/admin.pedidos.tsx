@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { CheckCircle2, ArrowRight, ExternalLink, XCircle, RefreshCw, Bike, Gift } from "lucide-react";
+import { CheckCircle2, ArrowRight, ExternalLink, XCircle, RefreshCw, Bike, Gift, MessageCircle } from "lucide-react";
 import { AdminShell } from "@/features/admin/AdminShell";
 import { RequireAdmin } from "@/features/admin/RequireAdmin";
 import { useAdminAuth } from "@/features/admin/AdminAuth";
@@ -11,6 +11,7 @@ import {
   adminAdvanceDelivery,
   adminCancelOrder,
 } from "@/lib/admin.functions";
+import { msgPagoAprobado, msgAvance, type DeliveryStatus } from "@/lib/notifications";
 
 export const Route = createFileRoute("/admin/pedidos")({
   component: () => <RequireAdmin><AdminPedidos/></RequireAdmin>,
@@ -24,6 +25,26 @@ const LABELS: Record<string, string> = {
   en_camino: "En camino",
   entregado: "Entregado",
 };
+
+const NEXT_STATUS: Record<string, DeliveryStatus> = {
+  validando_pago: "en_cocina",
+  en_cocina: "listo",
+  listo: "en_camino",
+  en_camino: "entregado",
+};
+
+function ctxFrom(r: any) {
+  return {
+    cliente: (r.cliente ?? "").split(" ")[0] || "cliente",
+    whatsapp: r.whatsapp ?? "",
+    ref: r.payment_reference ?? String(r.id).slice(0, 8),
+    total: Number(r.total),
+    origin: window.location.origin,
+    orderId: r.id,
+    esRegalo: r.tabla === "gift_orders",
+    metodo: r.metodo,
+  };
+}
 
 function AdminPedidos() {
   const { password } = useAdminAuth();
@@ -41,6 +62,11 @@ function AdminPedidos() {
     const data = await list({ data: { password: password! } });
     setRows(data as any[]);
     setLoading(false);
+  }
+
+  function openWA(url: string) {
+    // Pequeño delay para no chocar con reload/state update
+    window.open(url, "_blank", "noopener");
   }
 
   useEffect(() => { reload(); /* eslint-disable-next-line */ }, []);
@@ -145,16 +171,33 @@ function AdminPedidos() {
             <div className="mt-3 flex flex-wrap gap-2">
               {r.status === "PENDING" && (
                 <button
-                  onClick={async () => { await approve({ data: { password: password!, id: r.id, tabla: r.tabla } }); reload(); }}
+                  onClick={async () => {
+                    await approve({ data: { password: password!, id: r.id, tabla: r.tabla } });
+                    openWA(msgPagoAprobado(ctxFrom(r)));
+                    reload();
+                  }}
                   className="flex items-center gap-1 rounded-full bg-green-500 px-3 py-1 text-[11px] font-bold text-white">
                   <CheckCircle2 className="h-3 w-3"/> Liberar pedido
                 </button>
               )}
               {r.status !== "PENDING" && r.delivery_status !== "entregado" && (
                 <button
-                  onClick={async () => { await advance({ data: { password: password!, id: r.id, tabla: r.tabla, current: r.delivery_status } }); reload(); }}
+                  onClick={async () => {
+                    const next = NEXT_STATUS[r.delivery_status] ?? "en_cocina";
+                    await advance({ data: { password: password!, id: r.id, tabla: r.tabla, current: r.delivery_status } });
+                    openWA(msgAvance(ctxFrom(r), next));
+                    reload();
+                  }}
                   className="flex items-center gap-1 rounded-full bg-shocking px-3 py-1 text-[11px] font-bold text-white">
                   <ArrowRight className="h-3 w-3"/> Avanzar
+                </button>
+              )}
+              {r.whatsapp && r.status !== "PENDING" && (
+                <button
+                  onClick={() => openWA(msgAvance(ctxFrom(r), r.delivery_status as DeliveryStatus))}
+                  title="Reenviar notificación al cliente"
+                  className="flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-mocha ring-1 ring-mocha/20 hover:bg-crema">
+                  <MessageCircle className="h-3 w-3"/> Notificar
                 </button>
               )}
               {r.status !== "PENDING" && r.direccion_texto && r.delivery_status !== "entregado" && (
