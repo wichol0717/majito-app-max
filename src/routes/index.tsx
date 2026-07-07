@@ -65,6 +65,11 @@ function Home() {
             Entrar a la cocina (KDS)
           </Link>
         </p>
+        <p className="mt-1">
+          <Link to="/admin" className="underline decoration-shocking underline-offset-4">
+            Admin / Configuración
+          </Link>
+        </p>
       </footer>
       <InstallPrompt />
     </main>
