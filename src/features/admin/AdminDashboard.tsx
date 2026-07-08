@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Package, Users, Settings2, PartyPopper } from "lucide-react";
+import { Package, Users, Settings2, PartyPopper, BarChart3, Truck } from "lucide-react";
 import { AdminShell } from "./AdminShell";
 
 export function AdminDashboard() {
@@ -7,8 +7,10 @@ export function AdminDashboard() {
     <AdminShell title="Panel de administración">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card to="/admin/inventario" icon={<Package/>} title="Inventario" desc="Productos, stock y precios"/>
+        <Card to="/admin/pedidos" icon={<Truck/>} title="Pedidos" desc="Validar, avanzar y notificar"/>
         <Card to="/admin/paquetes" icon={<PartyPopper/>} title="Paquetes eventos" desc="Repostería · Snacks fríos"/>
         <Card to="/admin/clientes" icon={<Users/>} title="Clientes" desc="CRM · recurrentes · promos"/>
+        <Card to="/admin/reportes" icon={<BarChart3/>} title="Reportes" desc="Ventas, top productos y clientes"/>
         <Card to="/admin/configuracion" icon={<Settings2/>} title="Configuración" desc="WhatsApp · datos bancarios"/>
       </div>
     </AdminShell>
