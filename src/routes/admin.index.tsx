@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Lock } from "lucide-react";
+import { Lock, LogOut } from "lucide-react"; // <--- Importación actualizada
 import { verifyAdminPassword } from "@/lib/admin.functions";
 import { useAdminAuth } from "@/features/admin/AdminAuth";
 import { AdminDashboard } from "@/features/admin/AdminDashboard";
@@ -35,8 +35,13 @@ function LoginForm({ onOk }: { onOk: (p: string) => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-crema p-4">
       <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-2xl bg-white p-6 shadow-lg ring-1 ring-mocha/10">
-        <div className="flex items-center gap-2 text-shocking">
-          <Lock className="h-5 w-5"/><h1 className="text-lg font-bold">Panel de Majito</h1>
+        <div className="flex items-center justify-between gap-2 text-shocking">
+          <div className="flex items-center gap-2">
+            <Lock className="h-5 w-5"/><h1 className="text-lg font-bold">Panel de Majito</h1>
+          </div>
+          <button type="button" onClick={() => nav({ to: "/" })} className="text-gray-400 hover:text-red-500 transition-colors">
+            <LogOut className="h-5 w-5" />
+          </button>
         </div>
         <p className="text-xs text-mocha">Ingresa la contraseña de administración.</p>
         <input
