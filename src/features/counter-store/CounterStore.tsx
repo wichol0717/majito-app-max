@@ -12,6 +12,7 @@ import { CartPanel } from "./CartPanel";
 
 const CATEGORY_ICONS: Record<string, string> = {
   Galletas: "/galletas.svg",
+  "Caja de Galletas NY": "/caja.svg",
   Cupcakes: "/cupcakes.svg",
   Pasteles: "/pasteles.svg",
   Brownies: "/brownies.svg",
@@ -22,7 +23,7 @@ const CARRITO_EVENTOS_ICON_FLOAT = "/carrito-de-eventos.svg";
 
 // Categorías fijas del mostrador — siempre visibles como iconos,
 // aunque todavía no haya productos cargados en esa categoría.
-const CATEGORIAS_FIJAS = ["Galletas", "Cupcakes", "Pasteles", "Brownies"];
+const CATEGORIAS_FIJAS = ["Galletas", "Caja de Galletas NY", "Cupcakes", "Pasteles", "Brownies"];
 const CATEGORIA_INICIAL = "Galletas";
 
 function CounterStoreInner() {
@@ -104,7 +105,7 @@ function CounterStoreInner() {
               }`}
             >
               {CATEGORY_ICONS[c] ? (
-                <img src={CATEGORY_ICONS[c]} alt={c} className="h-16 w-16" />
+                <img src={CATEGORY_ICONS[c]} alt={c} className="h-16 w-16 rounded-full object-cover" />
               ) : (
                 <span className="px-3 py-2 text-sm font-semibold text-mocha">{c}</span>
               )}
