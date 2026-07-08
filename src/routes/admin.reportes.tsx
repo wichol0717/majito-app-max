@@ -1,0 +1,174 @@
+import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useState } from "react";
+import { BarChart3, TrendingUp, ShoppingBag, Users, DollarSign } from "lucide-react";
+import { AdminShell } from "@/features/admin/AdminShell";
+import { useAdminAuth } from "@/features/admin/AdminAuth";
+import { adminReports } from "@/lib/admin.functions";
+
+export const Route = createFileRoute("/admin/reportes")({
+  component: ReportesPage,
+});
+
+const fmt = (n: number) =>
+  new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n || 0);
+
+type Report = Awaited<ReturnType<typeof adminReports>>;
+
+function ReportesPage() {
+  const { password } = useAdminAuth();
+  const run = useServerFn(adminReports);
+  const [days, setDays] = useState(30);
+  const [data, setData] = useState<Report | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!password) return;
+    let cancel = false;
+    setLoading(true); setErr(null);
+    run({ data: { password, days } })
+      .then((r) => { if (!cancel) setData(r as Report); })
+      .catch((e) => { if (!cancel) setErr(e?.message ?? "Error"); })
+      .finally(() => { if (!cancel) setLoading(false); });
+    return () => { cancel = true; };
+  }, [password, days, run]);
+
+  if (!password) return <Navigate to="/admin" />;
+
+  return (
+    <AdminShell title="Reportes">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-mocha">Periodo:</span>
+        {[7, 15, 30, 90, 180, 365].map((d) => (
+          <button key={d} onClick={() => setDays(d)}
+            className={`rounded-full px-3 py-1 text-xs ${days === d ? "bg-shocking text-white" : "bg-white ring-1 ring-mocha/15 text-mocha hover:bg-sunset"}`}>
+            {d} días
+          </button>
+        ))}
+      </div>
+
+      {err && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</div>}
+      {loading && !data && <div className="text-sm text-mocha">Cargando…</div>}
+
+      {data && (
+        <div className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat icon={<DollarSign/>} label="Ingresos totales" value={fmt(data.totalIngresos)}/>
+            <Stat icon={<ShoppingBag/>} label="Pedidos" value={String(data.totalPedidos)}/>
+            <Stat icon={<TrendingUp/>} label="Ticket promedio" value={fmt(data.ticketPromedio)}/>
+            <Stat icon={<Users/>} label="Clientes top" value={String(data.topClientes.length)}/>
+          </div>
+
+          <Panel title="Ingresos por canal" icon={<BarChart3/>}>
+            <div className="grid gap-2 sm:grid-cols-4">
+              <Chip label="Mostrador" value={fmt(data.ingresos.mostrador)} n={data.pedidos.mostrador}/>
+              <Chip label="Regalos" value={fmt(data.ingresos.regalos)} n={data.pedidos.regalos}/>
+              <Chip label="Pasteles" value={fmt(data.ingresos.pasteles)} n={data.pedidos.pasteles}/>
+              <Chip label="Eventos" value={fmt(data.ingresos.eventos)} n={data.pedidos.eventos}/>
+            </div>
+          </Panel>
+
+          <Panel title="Ventas por día" icon={<TrendingUp/>}>
+            <SalesChart data={data.ventasPorDia}/>
+          </Panel>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Panel title="Top productos" icon={<ShoppingBag/>}>
+              <Table
+                head={["Producto", "Cant.", "Ingresos"]}
+                rows={data.topProductos.map((p) => [p.nombre, String(p.cantidad), fmt(p.ingresos)])}
+                empty="Sin productos en el periodo"
+              />
+            </Panel>
+            <Panel title="Métodos de pago" icon={<DollarSign/>}>
+              <Table
+                head={["Método", "Pedidos", "Monto"]}
+                rows={data.metodos.map((m) => [m.metodo, String(m.pedidos), fmt(m.monto)])}
+                empty="Sin datos"
+              />
+            </Panel>
+          </div>
+
+          <Panel title="Top clientes" icon={<Users/>}>
+            <Table
+              head={["Cliente", "WhatsApp", "Pedidos", "Total gastado", "Origen"]}
+              rows={data.topClientes.map((c: any) => [
+                c.name ?? "—",
+                c.whatsapp ?? "—",
+                String(c.total_orders ?? 0),
+                fmt(Number(c.total_spent ?? 0)),
+                c.origen ?? "—",
+              ])}
+              empty="Sin clientes registrados"
+            />
+          </Panel>
+        </div>
+      )}
+    </AdminShell>
+  );
+}
+
+function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-mocha/10">
+      <div className="flex items-center gap-2 text-shocking">{icon}<span className="text-xs font-semibold">{label}</span></div>
+      <p className="mt-2 text-2xl font-bold text-mocha">{value}</p>
+    </div>
+  );
+}
+
+function Panel({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-mocha/10">
+      <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-shocking">{icon}{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+function Chip({ label, value, n }: { label: string; value: string; n: number }) {
+  return (
+    <div className="rounded-xl bg-crema p-3">
+      <p className="text-[11px] font-semibold uppercase text-mocha/70">{label}</p>
+      <p className="text-lg font-bold text-mocha">{value}</p>
+      <p className="text-[11px] text-mocha/70">{n} pedidos</p>
+    </div>
+  );
+}
+
+function Table({ head, rows, empty }: { head: string[]; rows: string[][]; empty: string }) {
+  if (!rows.length) return <p className="text-xs text-mocha/70">{empty}</p>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="text-xs uppercase text-mocha/70">
+          <tr>{head.map((h) => <th key={h} className="py-2 pr-3 font-semibold">{h}</th>)}</tr>
+        </thead>
+        <tbody className="divide-y divide-mocha/10">
+          {rows.map((r, i) => (
+            <tr key={i}>{r.map((c, j) => <td key={j} className="py-2 pr-3 text-mocha">{c}</td>)}</tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SalesChart({ data }: { data: { fecha: string; monto: number }[] }) {
+  const max = useMemo(() => Math.max(1, ...data.map((d) => d.monto)), [data]);
+  if (!data.length) return <p className="text-xs text-mocha/70">Sin ventas en el periodo</p>;
+  return (
+    <div className="flex items-end gap-1 overflow-x-auto pb-2" style={{ height: 160 }}>
+      {data.map((d) => {
+        const h = Math.max(2, Math.round((d.monto / max) * 140));
+        return (
+          <div key={d.fecha} className="group flex flex-col items-center" style={{ minWidth: 18 }}>
+            <div className="rounded-t bg-shocking transition group-hover:bg-mocha" style={{ height: h, width: 14 }} title={`${d.fecha}: ${fmt(d.monto)}`}/>
+            <span className="mt-1 text-[9px] text-mocha/60">{d.fecha.slice(5)}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
