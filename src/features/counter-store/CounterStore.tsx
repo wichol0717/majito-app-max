@@ -1,4 +1,4 @@
-// [Módulo: features/counter-store] -> [Archivo: CounterStore.tsx] -> [Acción: CREAR]
+// [Módulo: features/counter-store] -> [Archivo: CounterStore.tsx] -> [Acción: CORRECCIÓN]
 // Ruta A: Catálogo de mostrador con stock vivo (esqueleto v1).
 
 import { useEffect, useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import { CartPanel } from "./CartPanel";
 const CATEGORY_ICONS: Record<string, string> = {
   Galletas: "/galletas.svg",
   "Caja de Galletas NY": "/caja.svg",
+  "Caja Cup Cake": "/caja-cupcake.svg",
   Cupcakes: "/cupcakes.svg",
   Pasteles: "/pasteles.svg",
   Brownies: "/brownies.svg",
@@ -23,7 +24,7 @@ const CARRITO_EVENTOS_ICON_FLOAT = "/carrito-de-eventos.svg";
 
 // Categorías fijas del mostrador — siempre visibles como iconos,
 // aunque todavía no haya productos cargados en esa categoría.
-const CATEGORIAS_FIJAS = ["Galletas", "Caja de Galletas NY", "Cupcakes", "Pasteles", "Brownies"];
+const CATEGORIAS_FIJAS = ["Galletas", "Caja de Galletas NY", "Caja Cup Cake", "Cupcakes", "Pasteles", "Brownies"];
 const CATEGORIA_INICIAL = "Galletas";
 
 function CounterStoreInner() {
