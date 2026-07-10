@@ -306,6 +306,19 @@ export function CartPanel() {
 
       clear();
       clearOrigenYCupon();
+
+      // Abrir WhatsApp con el mensaje del pedido + link al comprobante y semáforo
+      try {
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const extras: string[] = [];
+        if (comprobanteUrl) extras.push(`🧾 Comprobante SPEI: ${comprobanteUrl}`);
+        if (primerId) extras.push(`🔎 Semáforo del pedido: ${origin}/pedido/${primerId}`);
+        const msgFinal = extras.length ? `${mensajeWhats}\n\n${extras.join("\n")}` : mensajeWhats;
+        const url = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msgFinal)}`;
+        const win = window.open(url, "_blank", "noopener");
+        if (!win) window.location.href = url;
+      } catch { /* ignore */ }
+
       if (primerId) {
         navigate({ to: "/pedido/$id", params: { id: primerId } });
       }

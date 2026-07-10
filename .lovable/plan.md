@@ -1,42 +1,23 @@
-# Fase 2 — Regalos digitales + Repartidor
+## Problema
 
-## Módulo 4: Tarjeta digital de regalo y cupones
+En el checkout SPEI, `confirmarSpei()` en `src/features/counter-store/CartPanel.tsx` inserta el pedido y navega al semáforo, pero nunca abre `wa.me`. Solo el flujo "Efectivo/WhatsApp" (que usa el link `whatsappUrl`) manda mensaje. Resultado: cuando el cliente sube comprobante SPEI y confirma, ni tú ni él reciben el mensaje de WhatsApp.
 
-- Nueva ruta pública `src/routes/regalo.$id.tsx`:
-  - Lee el `gift_orders` por id.
-  - Muestra tarjeta bonita con el mensaje personalizado, remitente, festejado y foto/emoji temático.
-  - Botón "Comprar tu propio regalo con 5% off" → link a `/regalos?promo=REGALO5`.
-  - Botón "Ver estado del pedido" → `/pedido/:id`.
+## Solución
 
-- Cupones (aplicables al total del carrito, `CartPanel.tsx` + `GiftModal.tsx`):
-  - `REGALO5` (5%), `SOYBUENAMIGO` (10%), `REGALO15` (15%).
-  - Se leen de `app_settings` (nueva clave `cupones` JSON) para poder editarlos desde admin.
-  - Al aplicar, se guarda en `customers.cupon_activo` y en el pedido como `origen`.
+En `confirmarSpei()`, después de insertar los pedidos y **antes** del `navigate(...)`:
 
-- Banner en `/regalos` cuando `?promo=REGALO5`: precarga el cupón en el carrito y muestra aviso.
+1. Construir el mensaje final de WhatsApp reusando `mensajeWhats` + agregar:
+   - Link al comprobante subido (`comprobanteUrl`)
+   - Link al semáforo del pedido (`${origin}/pedido/${primerId}`)
+2. Abrir `https://wa.me/${WHATSAPP_NUM}?text=...` con `window.open(url, "_blank")` (evita bloqueo de popup porque se dispara en el mismo click del usuario).
+3. Después navegar a `/pedido/:id`.
 
-- Captura de `origen`: si el usuario llega vía `/regalo/:id` → `origen='regalo_digital'`; vía `?promo=...` → `origen='promo_<codigo>'`.
+También añadir el mismo `window.open` de WhatsApp al confirmar en efectivo si el usuario venía del botón "Confirmar" (actualmente depende de que el usuario haga clic en el `<a>` de WhatsApp — dejar ambos caminos cubiertos).
 
-## Módulo 5: Repartidor
+## Cambios
 
-- Nueva ruta `src/routes/reparto.$id.tsx` (link privado enviado por WhatsApp al repartidor):
-  - Muestra pedido: cliente, teléfono (click-to-call), dirección con botón "Abrir en Google Maps" (link `https://www.google.com/maps/dir/?api=1&destination=<lat>,<lng>`), total a cobrar, método de pago, comprobante si es SPEI.
-  - Botón "Marcar entregado" → server fn que setea `delivery_status='entregado'`.
-  - Si es regalo, muestra QR de la tarjeta digital (`/regalo/:id`) para mostrar al festejado.
+- `src/features/counter-store/CartPanel.tsx`:
+  - En `confirmarSpei()`, antes de `navigate`, calcular `msgFinal` (con link al comprobante y al pedido) y ejecutar `window.open(wa.me..., "_blank")`.
+  - Manejar caso `window.open` bloqueado → fallback `window.location.href`.
 
-- En `admin.pedidos.tsx` tarjeta "En camino":
-  - Botón "Enviar a repartidor" → prompt para número de WhatsApp → abre `wa.me` con el link `/reparto/:id` y mensaje pre-armado con dirección + total.
-
-## Cambios de datos
-
-- Migración:
-  - `gift_orders`: añadir `mensaje text`, `emoji text default '🎁'` (si no existen).
-  - `counter_orders` y `gift_orders`: añadir `cupon_codigo text`, `descuento numeric(10,2) default 0`.
-  - Insertar clave `cupones` en `app_settings` con los 3 cupones default.
-
-## Archivos
-
-- Nuevos: `src/routes/regalo.$id.tsx`, `src/routes/reparto.$id.tsx`, `src/lib/coupons.ts`.
-- Editar: `CartPanel.tsx`, `GiftModal.tsx` (input cupón + descuento), `admin.pedidos.tsx` (botón repartidor), `admin.configuracion.tsx` (editar cupones), `src/routes/regalos.tsx` (banner promo), `src/api/database.types.ts`.
-
-¿Apruebas para arrancar?
+Sin cambios de UI ni de esquema. Cero migración.
