@@ -21,7 +21,14 @@ export function CartPanel() {
   const { settings } = useAppSettings();
   const navigate = useNavigate();
   const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
-  const WHATSAPP_NUM = String(settings.whatsapp_number);
+  // Normaliza a formato internacional MX (521 + 10 dígitos) para wa.me
+  const waNumber = (raw: string) => {
+    const d = (raw || "").replace(/[^0-9]/g, "");
+    if (d.length === 10) return `521${d}`;
+    if (d.length === 12 && d.startsWith("52")) return `521${d.slice(2)}`;
+    return d;
+  };
+  const WHATSAPP_NUM = waNumber(String(settings.whatsapp_number || "7831450929"));
   const cuponesDisponibles: Cupon[] = useMemo(() => parseCupones((settings as any).cupones), [settings]);
 
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
@@ -204,8 +211,11 @@ export function CartPanel() {
     }
   }
 
-  async function confirmarSpei() {
+  async function confirmarSpei(e?: React.MouseEvent) {
     if (!puedeConfirmarSpei) return;
+    // CRÍTICO móvil: abrir la ventana DENTRO del gesto del usuario,
+    // antes de cualquier await, para que el navegador no la bloquee.
+    const waWin = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
     setEnviando(true);
     setError(null);
     try {
@@ -315,15 +325,21 @@ export function CartPanel() {
         if (primerId) extras.push(`🔎 Semáforo del pedido: ${origin}/pedido/${primerId}`);
         const msgFinal = extras.length ? `${mensajeWhats}\n\n${extras.join("\n")}` : mensajeWhats;
         const url = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msgFinal)}`;
-        const win = window.open(url, "_blank", "noopener");
-        if (!win) window.location.href = url;
+        if (waWin && !waWin.closed) {
+          waWin.location.href = url;
+        } else {
+          // Popup bloqueado: redirige la pestaña actual
+          window.location.href = url;
+          return;
+        }
       } catch { /* ignore */ }
 
       if (primerId) {
         navigate({ to: "/pedido/$id", params: { id: primerId } });
       }
-    } catch (e: any) {
-      setError(e?.message ?? "No se pudo registrar el pedido");
+    } catch (err: any) {
+      if (waWin && !waWin.closed) waWin.close();
+      setError(err?.message ?? "No se pudo registrar el pedido");
     } finally {
       setEnviando(false);
     }
