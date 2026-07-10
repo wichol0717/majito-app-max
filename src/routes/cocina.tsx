@@ -1,6 +1,3 @@
-// KDS realtime protegido con contraseña propia ("majito2005").
-// Auto-refresca cada 4s (near-realtime sin conexión persistente).
-
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
@@ -83,7 +80,6 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
     setLoading(true);
     try {
       const data = (await list({ data: { password } })) as any[];
-      // Ping sonoro si aparece un pedido nuevo
       const currentIds = new Set(data.map((r) => `${r.tabla}-${r.id}`));
       const isNew = [...currentIds].some((id) => !prevIds.current.has(id));
       if (isNew && prevIds.current.size > 0 && typeof window !== "undefined") {
@@ -93,7 +89,7 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
           o.frequency.value = 880; g.gain.value = 0.15;
           o.connect(g); g.connect(ctx.destination); o.start();
           setTimeout(() => { o.stop(); ctx.close(); }, 250);
-        } catch { /* ignore */ }
+        } catch {}
       }
       prevIds.current = currentIds;
       setRows(data);
@@ -107,7 +103,6 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
     reload();
     const id = setInterval(reload, 4000);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const byCol = (key: string) => rows.filter((r) => r.delivery_status === key);
@@ -185,7 +180,17 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
                           ]}
                         </button>
                       ) : (
-                        <p className="mt-2 text-center text-[10px] text-mocha">Repartidor en ruta</p>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-center text-[10px] text-mocha">Repartidor en ruta</p>
+                          <button
+                            onClick={async () => {
+                              await advance({ data: { password, id: r.id, tabla: r.tabla, current: r.delivery_status } });
+                              reload();
+                            }}
+                            className="flex w-full items-center justify-center gap-1 rounded-full bg-green-500 py-2 text-xs font-bold text-white active:scale-[0.98]">
+                            Finalizar Pedido
+                          </button>
+                        </div>
                       )}
                     </article>
                   );

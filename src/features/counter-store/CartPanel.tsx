@@ -21,7 +21,7 @@ export function CartPanel() {
   const { settings } = useAppSettings();
   const navigate = useNavigate();
   const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
-  // Normaliza a formato internacional MX (521 + 10 dígitos) para wa.me
+  
   const waNumber = (raw: string) => {
     const d = (raw || "").replace(/[^0-9]/g, "");
     if (d.length === 10) return `521${d}`;
@@ -34,11 +34,9 @@ export function CartPanel() {
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
   const [direccion, setDireccion] = useState<AddressValue | null>(null);
 
-  // Comprador (para crear registro del pedido)
   const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
 
-  // Método de pago + estado del checkout SPEI
   const [metodo, setMetodo] = useState<"efectivo" | "spei">("efectivo");
   const [referencia] = useState(generarReferencia());
   const [comprobanteFile, setComprobanteFile] = useState<File | null>(null);
@@ -48,7 +46,6 @@ export function CartPanel() {
   const [refCopiada, setRefCopiada] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Cupón + origen
   const [cuponInput, setCuponInput] = useState("");
   const [cuponAplicado, setCuponAplicado] = useState<Cupon | null>(null);
   const [cuponMsg, setCuponMsg] = useState<string | null>(null);
@@ -59,7 +56,6 @@ export function CartPanel() {
       const found = findCoupon(cuponesDisponibles, stored);
       if (found) { setCuponAplicado(found); setCuponInput(found.code); }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cuponesDisponibles.length]);
 
   function aplicarCupon() {
@@ -75,7 +71,6 @@ export function CartPanel() {
     setCuponMsg(null);
   }
 
-  // Upsell state
   const [velaProd, setVelaProd] = useState<Product | null>(null);
   const [showGiftHint, setShowGiftHint] = useState(false);
 
@@ -87,8 +82,6 @@ export function CartPanel() {
   const normalizarDir = (s: string) =>
     s.toLowerCase().replace(/\s+/g, " ").trim();
 
-  // Direcciones únicas de envío. Si el mostrador va a domicilio y coincide con
-  // la de un regalo (mismo comprador entrega en el mismo lugar), se cobra 1 solo envío.
   const direccionesEnvio = useMemo(() => {
     const set = new Set<string>();
     if (entrega === "envio" && direccion && direccion.direccion_texto.length >= 5) {
@@ -213,20 +206,16 @@ export function CartPanel() {
 
   async function confirmarSpei(e?: React.MouseEvent) {
     if (!puedeConfirmarSpei) return;
-    // CRÍTICO móvil: abrir la ventana DENTRO del gesto del usuario,
-    // antes de cualquier await, para que el navegador no la bloquee.
     const waWin = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
     setEnviando(true);
     setError(null);
     try {
-      // Descuenta stock (best-effort — si falla, sigue con el pedido)
       for (const it of items) {
         try {
           await supabase.rpc("decrement_stock", { _product_id: it.product.id, _qty: it.quantity } as any);
-        } catch { /* ignore, admin resolverá */ }
+        } catch { }
       }
 
-      // Regalos: uno por regalo, así el destinatario recibe su semáforo
       const giftItems = items.filter((i) => i.isGift);
       const regularItems = items.filter((i) => !i.isGift);
       const yaCobradas = new Set<string>();
@@ -301,7 +290,6 @@ export function CartPanel() {
         if (!primerId) primerId = data?.id ?? null;
       }
 
-      // Origen + cupón del cliente
       try {
         const origen = readOrigen();
         const wa = buyerWhatsapp.trim();
@@ -312,12 +300,11 @@ export function CartPanel() {
             _cupon: cuponAplicado?.code ?? null,
           } as any);
         }
-      } catch { /* ignore */ }
+      } catch { }
 
       clear();
       clearOrigenYCupon();
 
-      // Abrir WhatsApp con el mensaje del pedido + link al comprobante y semáforo
       try {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
         const extras: string[] = [];
@@ -328,11 +315,10 @@ export function CartPanel() {
         if (waWin && !waWin.closed) {
           waWin.location.href = url;
         } else {
-          // Popup bloqueado: redirige la pestaña actual
           window.location.href = url;
           return;
         }
-      } catch { /* ignore */ }
+      } catch { }
 
       if (primerId) {
         navigate({ to: "/pedido/$id", params: { id: primerId } });
@@ -470,7 +456,6 @@ export function CartPanel() {
         })}
       </ul>
 
-      {/* ===== UPSELLS ===== */}
       <div className="rounded-2xl border border-sweet-pink/40 bg-sweet-pink/10 p-3">
         <p className="mb-2 flex items-center gap-1 text-sm font-bold text-shocking">
           <Sparkles className="h-4 w-4"/> ¿Le agregas un detalle especial?
@@ -555,7 +540,6 @@ export function CartPanel() {
         )}
       </div>
 
-      {/* Método de pago */}
       <div className="border-t border-mocha/10 pt-3">
         <p className="mb-2 text-sm font-semibold text-foreground">Método de pago</p>
         <div className="grid grid-cols-2 gap-2">
@@ -572,7 +556,6 @@ export function CartPanel() {
         </div>
       </div>
 
-      {/* Datos bancarios: siempre visibles pero destacados si SPEI */}
       <div className={`rounded-xl p-3 text-xs text-foreground ${metodo === "spei" ? "bg-white ring-2 ring-shocking/40" : "bg-crema"}`}>
         <p className="mb-1 font-semibold text-shocking">Datos para transferencia SPEI</p>
         <p>Banco: <strong>{settings.bank_name}</strong></p>
@@ -648,7 +631,6 @@ export function CartPanel() {
         </div>
       </div>
 
-      {/* Cupón */}
       <div className="rounded-xl border border-sunset/60 bg-sunset/20 p-3">
         <p className="mb-2 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-shocking">
           <Ticket className="h-3 w-3"/> ¿Tienes un cupón?
@@ -686,36 +668,31 @@ export function CartPanel() {
           target="_blank"
           rel="noopener noreferrer"
           aria-disabled={!puedeConfirmarWhats}
-          onClick={(e) => { if (!puedeConfirmarWhats) e.preventDefault(); }}
-          className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow transition ${
-            puedeConfirmarWhats ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/40"
+          onClick={(e) => {
+            if (!puedeConfirmarWhats) {
+              e.preventDefault();
+              setError("Por favor completa los datos de entrega.");
+            }
+          }}
+          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition ${
+            puedeConfirmarWhats ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/30"
           }`}
         >
-          <MessageCircle className="h-5 w-5" />
-          Confirmar y enviar por WhatsApp
+          <MessageCircle className="h-4 w-4" />
+          Confirmar pedido por WhatsApp
         </a>
       ) : (
         <button
           type="button"
           disabled={!puedeConfirmarSpei || enviando}
           onClick={confirmarSpei}
-          className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow transition ${
-            puedeConfirmarSpei && !enviando ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/40"
+          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white transition ${
+            puedeConfirmarSpei ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/30"
           }`}
         >
-          {enviando ? <Loader2 className="h-5 w-5 animate-spin"/> : <CheckCircle2 className="h-5 w-5"/>}
-          {enviando ? "Registrando pedido…" : "Confirmar pedido SPEI"}
+          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar pedido SPEI"}
         </button>
       )}
-      {metodo === "spei" && !puedeConfirmarSpei && (
-        <p className="text-center text-[11px] text-mocha">
-          Completa tus datos, dirección {hayMostrador && entrega === "envio" ? "" : "(si aplica)"} y sube el comprobante para confirmar.
-        </p>
-      )}
-
-      <Button variant="ghost" size="sm" onClick={clear} className="text-mocha">
-        Vaciar carrito
-      </Button>
     </aside>
   );
 }
