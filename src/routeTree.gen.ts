@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegalosRouteImport } from './routes/regalos'
+import { Route as RastreoRouteImport } from './routes/rastreo'
 import { Route as PersonalizadosRouteImport } from './routes/personalizados'
 import { Route as MostradorRouteImport } from './routes/mostrador'
 import { Route as EventosRouteImport } from './routes/eventos'
@@ -30,6 +31,11 @@ import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
 const RegalosRoute = RegalosRouteImport.update({
   id: '/regalos',
   path: '/regalos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RastreoRoute = RastreoRouteImport.update({
+  id: '/rastreo',
+  path: '/rastreo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PersonalizadosRoute = PersonalizadosRouteImport.update({
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
   '/personalizados': typeof PersonalizadosRoute
+  '/rastreo': typeof RastreoRoute
   '/regalos': typeof RegalosRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/configuracion': typeof AdminConfiguracionRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
   '/personalizados': typeof PersonalizadosRoute
+  '/rastreo': typeof RastreoRoute
   '/regalos': typeof RegalosRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/configuracion': typeof AdminConfiguracionRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
   '/personalizados': typeof PersonalizadosRoute
+  '/rastreo': typeof RastreoRoute
   '/regalos': typeof RegalosRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/configuracion': typeof AdminConfiguracionRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/eventos'
     | '/mostrador'
     | '/personalizados'
+    | '/rastreo'
     | '/regalos'
     | '/admin/clientes'
     | '/admin/configuracion'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/eventos'
     | '/mostrador'
     | '/personalizados'
+    | '/rastreo'
     | '/regalos'
     | '/admin/clientes'
     | '/admin/configuracion'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/eventos'
     | '/mostrador'
     | '/personalizados'
+    | '/rastreo'
     | '/regalos'
     | '/admin/clientes'
     | '/admin/configuracion'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   EventosRoute: typeof EventosRoute
   MostradorRoute: typeof MostradorRoute
   PersonalizadosRoute: typeof PersonalizadosRoute
+  RastreoRoute: typeof RastreoRoute
   RegalosRoute: typeof RegalosRoute
   PedidoIdRoute: typeof PedidoIdRoute
   RegaloIdRoute: typeof RegaloIdRoute
@@ -249,6 +262,13 @@ declare module '@tanstack/react-router' {
       path: '/regalos'
       fullPath: '/regalos'
       preLoaderRoute: typeof RegalosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rastreo': {
+      id: '/rastreo'
+      path: '/rastreo'
+      fullPath: '/rastreo'
+      preLoaderRoute: typeof RastreoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/personalizados': {
@@ -395,6 +415,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventosRoute: EventosRoute,
   MostradorRoute: MostradorRoute,
   PersonalizadosRoute: PersonalizadosRoute,
+  RastreoRoute: RastreoRoute,
   RegalosRoute: RegalosRoute,
   PedidoIdRoute: PedidoIdRoute,
   RegaloIdRoute: RegaloIdRoute,
