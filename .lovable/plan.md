@@ -1,23 +1,33 @@
-## Problema
+## Plan — Arreglar envío automático de WhatsApp al confirmar SPEI
 
-En el checkout SPEI, `confirmarSpei()` en `src/features/counter-store/CartPanel.tsx` inserta el pedido y navega al semáforo, pero nunca abre `wa.me`. Solo el flujo "Efectivo/WhatsApp" (que usa el link `whatsappUrl`) manda mensaje. Resultado: cuando el cliente sube comprobante SPEI y confirma, ni tú ni él reciben el mensaje de WhatsApp.
+El botón **Confirmar pedido SPEI** hoy registra el pedido pero no abre WhatsApp de forma confiable (el popup se bloquea en móvil por abrirse después de varios `await`). Voy a corregirlo usando tu número confirmado **7831450929** (formateado como `5217831450929`).
 
-## Solución
+### Cambios en `src/features/counter-store/CartPanel.tsx`
 
-En `confirmarSpei()`, después de insertar los pedidos y **antes** del `navigate(...)`:
+1. **Normalizar el número de WhatsApp**
+   - Función local `waNumber()`: limpia caracteres, y si detecta 10 dígitos mexicanos les antepone `521`.
+   - Se aplica tanto al número de `settings.whatsapp_number` como al del comprador.
 
-1. Construir el mensaje final de WhatsApp reusando `mensajeWhats` + agregar:
-   - Link al comprobante subido (`comprobanteUrl`)
-   - Link al semáforo del pedido (`${origin}/pedido/${primerId}`)
-2. Abrir `https://wa.me/${WHATSAPP_NUM}?text=...` con `window.open(url, "_blank")` (evita bloqueo de popup porque se dispara en el mismo click del usuario).
-3. Después navegar a `/pedido/:id`.
+2. **Abrir la ventana ANTES de los `await`** (clave para móviles)
+   - Al hacer click en "Confirmar pedido SPEI", abrir de inmediato `window.open("about:blank", "_blank")` — dentro del gesto del usuario, así no se bloquea.
+   - Guardar la referencia a esa ventana.
+   - Después de registrar el pedido, actualizar `win.location.href` con el link final de WhatsApp.
+   - Si `win` es null (navegador bloqueó), fallback a `window.location.href`.
 
-También añadir el mismo `window.open` de WhatsApp al confirmar en efectivo si el usuario venía del botón "Confirmar" (actualmente depende de que el usuario haga clic en el `<a>` de WhatsApp — dejar ambos caminos cubiertos).
+3. **Mensaje final SPEI**
+   - Reutilizar `mensajeWhats` + agregar:
+     - `🧾 Comprobante SPEI: <url>`
+     - `🔎 Semáforo del pedido: <origin>/pedido/<id>`
+   - Enviado al número de la tienda (`5217831450929`).
 
-## Cambios
+4. **Navegación al semáforo**
+   - Después de disparar WhatsApp, navegar a `/pedido/:id` como ya se hacía.
 
-- `src/features/counter-store/CartPanel.tsx`:
-  - En `confirmarSpei()`, antes de `navigate`, calcular `msgFinal` (con link al comprobante y al pedido) y ejecutar `window.open(wa.me..., "_blank")`.
-  - Manejar caso `window.open` bloqueado → fallback `window.location.href`.
+### Publicación
 
-Sin cambios de UI ni de esquema. Cero migración.
+- No toco Vercel directamente (no tengo acceso), pero si tu repo de GitHub está conectado a Vercel, el push automático desplegará el cambio.
+- Publicaré también en Lovable (`.lovable.app`) para que puedas verificar antes.
+
+### Fuera de alcance
+
+- No cambio UI, carrito, base de datos, cupones, stock, ni el flujo Efectivo (ese ya funciona con el `<a href>`).
