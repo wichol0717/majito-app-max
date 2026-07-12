@@ -1,6 +1,3 @@
-// [Módulo: features/counter-store] -> [Archivo: CounterStore.tsx] -> [Acción: CORRECCIÓN]
-// Ruta A: Catálogo de mostrador con stock vivo (esqueleto v1).
-
 import { useEffect, useMemo, useState } from "react";
 import { ShoppingBag, Cake, X } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -17,14 +14,21 @@ const CATEGORY_ICONS: Record<string, string> = {
   Cupcakes: "/cupcakes.svg",
   Pasteles: "/pasteles.svg",
   Brownies: "/brownies.svg",
+  "Caja Brownies": "/caja-brownies.png",
 };
 
 const CARRITO_EVENTOS_ICON_TAB = "/carrito_eventos.png";
 const CARRITO_EVENTOS_ICON_FLOAT = "/carrito-de-eventos.svg";
 
-// Categorías fijas del mostrador — siempre visibles como iconos,
-// aunque todavía no haya productos cargados en esa categoría.
-const CATEGORIAS_FIJAS = ["Galletas", "Caja de Galletas NY", "Caja Cup Cake", "Cupcakes", "Pasteles", "Brownies"];
+const CATEGORIAS_FIJAS = [
+  "Galletas", 
+  "Caja de Galletas NY", 
+  "Caja Cup Cake", 
+  "Cupcakes", 
+  "Pasteles", 
+  "Brownies",
+  "Caja Brownies"
+];
 const CATEGORIA_INICIAL = "Galletas";
 
 function CounterStoreInner() {
@@ -56,7 +60,6 @@ function CounterStoreInner() {
     const set = new Set<string>(CATEGORIAS_FIJAS);
     products.forEach((p) => {
       const cat = p.categoria?.toLowerCase();
-      // Velas se maneja como upsell (regalo/complemento), no como pestaña.
       if (
         p.categoria &&
         cat !== "paquetes" &&
@@ -135,12 +138,10 @@ function CounterStoreInner() {
         )}
       </div>
 
-      {/* Desktop cart (sticky) */}
       <div className="hidden md:sticky md:top-4 md:self-start md:block">
         <CartPanel />
       </div>
 
-      {/* Mobile cart drawer */}
       {mobileCartOpen && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black/50 md:hidden" onClick={() => setMobileCartOpen(false)}>
           <div className="mt-auto max-h-[90vh] overflow-y-auto rounded-t-3xl bg-crema p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
