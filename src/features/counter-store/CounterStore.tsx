@@ -81,7 +81,19 @@ function CounterStoreInner() {
     }
   }, [categorias, categoria]);
 
-  const visibles = products.filter((p) => p.categoria === categoria);
+  const visibles = useMemo(() => {
+    const list = products.filter((p) => p.categoria === categoria);
+    if (categoria === "Caja Cup Cake") {
+      return [...list].sort((a, b) => {
+        const nameA = a.nombre || "";
+        const nameB = b.nombre || "";
+        if (nameA.includes("6") && nameB.includes("4")) return -1;
+        if (nameA.includes("4") && nameB.includes("6")) return 1;
+        return 0;
+      });
+    }
+    return list;
+  }, [products, categoria]);
 
   if (loading) return <p className="text-mocha">Cargando el mostrador…</p>;
   if (error)

@@ -46,14 +46,14 @@ function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-16">
-        <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="mb-6 flex flex-col items-center justify-center gap-4">
           <h2 className="text-3xl font-serif italic font-bold text-shocking md:text-4xl">Nuestros productos</h2>
           <Link
             to="/rastreo"
             className="flex items-center gap-2 text-xl font-bold text-orange-600 underline decoration-orange-600 underline-offset-4 hover:text-orange-700 transition-colors"
           >
             <img src="/rastreo.png" alt="Icono" className="w-8 h-8 object-contain" />
-            Buscar tu pedido
+            Busca tu pedido
           </Link>
         </div>
         <CounterStore />
