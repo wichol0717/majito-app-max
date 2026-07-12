@@ -11,23 +11,23 @@ const CATEGORY_ICONS: Record<string, string> = {
   Galletas: "/galletas.svg",
   "Caja de Galletas NY": "/caja.svg",
   "Caja Cup Cake": "/caja-cupcake.svg",
+  "Caja Brownies": "/caja-brownies.png",
   Cupcakes: "/cupcakes.svg",
   Pasteles: "/pasteles.svg",
   Brownies: "/brownies.svg",
-  "Caja Brownies": "/caja-brownies.png",
 };
 
 const CARRITO_EVENTOS_ICON_TAB = "/carrito_eventos.png";
 const CARRITO_EVENTOS_ICON_FLOAT = "/carrito-de-eventos.svg";
 
 const CATEGORIAS_FIJAS = [
-  "Galletas", 
-  "Caja de Galletas NY", 
-  "Caja Cup Cake", 
-  "Cupcakes", 
-  "Pasteles", 
-  "Brownies",
-  "Caja Brownies"
+  "Galletas",
+  "Caja de Galletas NY",
+  "Caja Cup Cake",
+  "Caja Brownies",
+  "Cupcakes",
+  "Pasteles",
+  "Brownies"
 ];
 const CATEGORIA_INICIAL = "Galletas";
 
