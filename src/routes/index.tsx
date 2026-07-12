@@ -48,22 +48,12 @@ function Home() {
       <section className="mx-auto max-w-6xl px-6 pb-16">
         <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <h2 className="text-3xl font-serif italic font-bold text-shocking md:text-4xl">Nuestros productos</h2>
-          <div className="flex items-center gap-6">
-            <Link
-              to="/rastreo"
-              className="flex items-center justify-center w-12 h-12 rounded-full bg-sunset/20 hover:scale-105 transition-transform duration-300 cursor-pointer"
-              title="Rastrear pedido"
-            >
-              <img 
-                src="/rastreo.svg"
-                alt="Rastrear pedido" 
-                className="w-8 h-8 object-contain"
-              />
-            </Link>
-            <Link to="/mostrador" className="text-sm font-semibold text-mocha underline decoration-shocking underline-offset-4">
-              Ver mostrador completo →
-            </Link>
-          </div>
+          <Link
+            to="/rastreo"
+            className="text-sm font-semibold text-mocha underline decoration-shocking underline-offset-4 hover:text-shocking transition-colors"
+          >
+            Buscar tu pedido →
+          </Link>
         </div>
         <CounterStore />
       </section>
