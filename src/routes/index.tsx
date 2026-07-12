@@ -50,9 +50,10 @@ function Home() {
           <h2 className="text-3xl font-serif italic font-bold text-shocking md:text-4xl">Nuestros productos</h2>
           <Link
             to="/rastreo"
-            className="text-sm font-semibold text-mocha underline decoration-shocking underline-offset-4 hover:text-shocking transition-colors"
+            className="flex items-center gap-2 text-xl font-bold text-orange-600 underline decoration-orange-600 underline-offset-4 hover:text-orange-700 transition-colors"
           >
-            Buscar tu pedido →
+            <img src="/rastreo.png" alt="Icono" className="w-8 h-8 object-contain" />
+            Buscar tu pedido
           </Link>
         </div>
         <CounterStore />
