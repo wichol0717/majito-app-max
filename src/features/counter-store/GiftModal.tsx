@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Gift, Minus, Plus } from "lucide-react";
+import { Gift, Minus, Plus, Check } from "lucide-react";
 import { useCart, type Product } from "./CartContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { AddressPicker, type AddressValue } from "@/components/AddressPicker";
@@ -14,6 +14,16 @@ const MENSAJES = [
   "Para alguien especial",
   "Te amo",
 ];
+
+// --- NUEVO: Constante para las tarjetas visuales ---
+const TARJETAS = [
+  { id: "cumple", label: "Feliz Cumpleaños", img: "/tarjetas/cumple.jpg" },
+  { id: "boda", label: "Feliz Boda", img: "/tarjetas/boda.jpg" },
+  { id: "aniversario", label: "Feliz Aniversario", img: "/tarjetas/aniversario.jpg" },
+  { id: "amor", label: "Te amo", img: "/tarjetas/amor.jpg" },
+  { id: "especial", label: "Para alguien especial", img: "/tarjetas/especial.jpg" },
+];
+// ---------------------------------------------------
 
 interface Props {
   product: Product | null;
@@ -26,6 +36,11 @@ export function GiftModal({ product, onClose }: Props) {
   const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
   const [qty, setQty] = useState(1);
   const [mensaje, setMensaje] = useState(MENSAJES[0]);
+  
+  // --- NUEVO: Estado para la tarjeta seleccionada ---
+  const [selectedCard, setSelectedCard] = useState(TARJETAS[0]);
+  // --------------------------------------------------
+
   const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
   const [recipientName, setRecipientName] = useState("");
@@ -57,6 +72,10 @@ export function GiftModal({ product, onClose }: Props) {
       recipientLocation: recipientAddress.direccion_texto,
       recipientLat: recipientAddress.latitud,
       recipientLng: recipientAddress.longitud,
+      // --- NUEVO: Se anexa la información visual al carrito ---
+      cardId: selectedCard.id,
+      cardImage: selectedCard.img,
+      // --------------------------------------------------------
     });
     setQty(1);
     setBuyerName("");
@@ -116,6 +135,41 @@ export function GiftModal({ product, onClose }: Props) {
             </div>
           </div>
         </div>
+
+        {/* --- NUEVO: Selector de Tarjeta Visual --- */}
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-foreground">
+            Diseño de la tarjeta digital
+          </label>
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+            {TARJETAS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setSelectedCard(t)}
+                className={`relative flex min-w-[100px] flex-shrink-0 flex-col overflow-hidden rounded-xl border-2 transition-all ${
+                  selectedCard.id === t.id ? "border-shocking" : "border-mocha/20 hover:border-shocking/40"
+                }`}
+              >
+                <div className="relative h-16 w-full bg-sunset/30">
+                  {/* Cuando crees las imágenes reales, el navegador usará la etiqueta img. 
+                      Por ahora, mostrará el texto alternativo (alt) si la imagen no existe. */}
+                  <img src={t.img} alt={t.label} className="h-full w-full object-cover text-[10px] text-mocha flex items-center justify-center" />
+                  
+                  {selectedCard.id === t.id && (
+                    <div className="absolute right-1 top-1 rounded-full bg-shocking p-0.5">
+                      <Check className="h-3 w-3 text-white" />
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white py-1.5 text-center text-[10px] font-medium text-foreground">
+                  {t.label}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* --------------------------------------- */}
 
         <div>
           <label className="mb-2 block text-sm font-semibold text-foreground">
