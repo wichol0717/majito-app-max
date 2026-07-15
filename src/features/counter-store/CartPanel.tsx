@@ -690,7 +690,7 @@ export function CartPanel() {
             puedeConfirmarSpei ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/30"
           }`}
         >
-          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar pedido SPEI"}
+          {enviando ? <Loader2 className="h-4 w-4 animate-spin"/> : "Confirmar pedido SPEI"}
         </button>
       )}
     </aside>

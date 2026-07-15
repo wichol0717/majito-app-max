@@ -1,7 +1,6 @@
-// [Módulo: features/custom-cakes] -> [Archivo: CustomCakeForm.tsx] -> [Acción: CREAR]
-// Ruta B: Cotizador de pastel personalizado (esqueleto v1).
-
+// [Módulo: features/custom-cakes] -> [Archivo: CustomCakeForm.tsx]
 import { useEffect, useState } from "react";
+import { supabase } from "@/api/supabase";
 
 const STORAGE_KEY = "majito.custom-cake.v1";
 type FormFields = {
@@ -17,6 +16,8 @@ const EMPTY: FormFields = {
 
 export function CustomCakeForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
   const today = new Date().toISOString().split("T")[0];
   const [fields, setFields] = useState<FormFields>(() => {
     if (typeof window === "undefined") return EMPTY;
@@ -34,26 +35,82 @@ export function CustomCakeForm() {
   const set = (k: keyof FormFields) => (e: { target: { value: string } }) =>
     setFields((f) => ({ ...f, [k]: e.target.value }));
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    let imageUrl = null;
+    
+    // --- LÓGICA DE SUBIDA DE IMAGEN MEJORADA ---
+    if (file) {
+      try {
+        const fileExt = file.name.split('.').pop();
+        // Usamos Date.now y Math.random para evitar errores de crypto en localhost/http
+        const randomString = Math.random().toString(36).substring(2, 10);
+        const fileName = `${Date.now()}-${randomString}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('foto-referencia') // IMPORTANTE: El bucket debe llamarse exactamente así
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error("Error de Supabase al subir:", uploadError.message);
+          alert(`No se pudo subir la foto: ${uploadError.message}. El pedido se enviará sin foto.`);
+        } else {
+          const { data } = supabase.storage.from('foto-referencia').getPublicUrl(fileName);
+          imageUrl = data.publicUrl;
+        }
+      } catch (err) {
+        console.error("Error inesperado en la imagen:", err);
+      }
+    }
+
+    // --- GUARDADO DEL PEDIDO ---
+    const { error } = await supabase
+      .from('custom_cake_orders')
+      .insert([{ 
+        nombre_cliente: fields.customer_name,
+        customer_whatsapp: fields.customer_whatsapp,
+        delivery_date: fields.delivery_date,
+        flavor_chosen: fields.flavor_chosen,
+        detalles: fields.notes,
+        reference_image_url: imageUrl, // Aquí irá el link o null si falló
+        total: 0,
+        delivery_status: 'validando_pago'
+      } as any]);
+
+    if (!error) {
+      setSubmitted(true);
+      window.localStorage.removeItem(STORAGE_KEY);
+
+      const mensajeWA = `¡Hola! Quiero solicitar una cotización para un pastel personalizado.%0A%0A` +
+        `*Nombre:* ${fields.customer_name}%0A` +
+        `*Fecha de entrega:* ${fields.delivery_date}%0A` +
+        `*Sabor:* ${fields.flavor_chosen}%0A` +
+        `*Notas:* ${fields.notes ? fields.notes : 'Ninguna'}%0A` +
+        `*Referencia:* ${imageUrl ? imageUrl : 'Sin foto adjunta'}`;
+
+      window.open(`https://wa.me/527831450929?text=${mensajeWA}`, "_blank");
+    } else {
+      console.error(error);
+      alert("Hubo un error al enviar el formulario, intenta de nuevo.");
+    }
+    setLoading(false);
+  };
+
   if (submitted) {
     return (
       <div className="rounded-2xl border border-sweet-pink bg-white p-8 text-center">
-        <h3 className="text-2xl font-bold text-shocking">¡Recibido!</h3>
+        <h3 className="text-2xl font-bold text-shocking">¡Solicitud enviada!</h3>
         <p className="mt-2 text-foreground/80">
-          Tienes <strong>24 horas</strong> para subir tu comprobante del anticipo del 50%.
-          Después el cupo se libera automáticamente.
+          Se ha abierto WhatsApp para que podamos darte tu cotización y afinar los detalles de tu pastel.
         </p>
       </div>
     );
   }
 
   return (
-    <form
-      className="space-y-5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        setSubmitted(true);
-      }}
-    >
+    <form className="space-y-5" onSubmit={handleSubmit}>
       <Field label="Tu nombre" name="customer_name" required value={fields.customer_name} onChange={set("customer_name")} />
       <Field label="WhatsApp" name="customer_whatsapp" required placeholder="Ej. 782 123 4567" value={fields.customer_whatsapp} onChange={set("customer_whatsapp")} />
       <Field
@@ -74,6 +131,7 @@ export function CustomCakeForm() {
         <input
           type="file"
           accept="image/*"
+          onChange={(e) => e.target.files && setFile(e.target.files[0])}
           className="mt-2 block w-full text-sm text-mocha file:mr-4 file:rounded-full file:border-0 file:bg-sweet-pink file:px-4 file:py-2 file:text-sm file:font-semibold file:text-foreground"
         />
       </div>
@@ -93,9 +151,10 @@ export function CustomCakeForm() {
 
       <button
         type="submit"
-        className="w-full rounded-full bg-shocking px-6 py-4 text-lg font-bold text-white shadow-md transition hover:bg-shocking/90"
+        disabled={loading}
+        className="w-full rounded-full bg-shocking px-6 py-4 text-lg font-bold text-white shadow-md transition hover:bg-shocking/90 disabled:opacity-50"
       >
-        Continuar al anticipo (50%)
+        {loading ? "Enviando..." : "Solicitar Cotización"}
       </button>
     </form>
   );
