@@ -344,11 +344,11 @@ export function CartPanel() {
     <aside className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-lg ring-1 ring-mocha/10">
       <div className="grid grid-cols-2 gap-2">
         <Link
-          to="/personalizados"
+          to="/personalizado"
           className="flex items-center justify-center gap-2 rounded-full bg-sweet-pink px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
           <span className="text-[10px] font-bold opacity-60">B</span>
-          Personalizados
+          Personalizado
         </Link>
         <Link
           to="/eventos"
