@@ -14,7 +14,7 @@ function Home() {
         <p className="text-sm uppercase tracking-[0.3em] text-mocha">{"\n"}</p>
         <h1 className="mt-3 flex justify-center">
           <img
-            src="/titulo_majito.svg"
+            src="/titulo_majito.png"
             alt="Majito Cake"
             width={908}
             height={381}
