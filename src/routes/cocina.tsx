@@ -75,6 +75,7 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tempPrices, setTempPrices] = useState<Record<string, string>>({});
   const prevIds = useRef<Set<string>>(new Set());
 
   const formatWaNumber = (phone: any) => {
@@ -109,8 +110,8 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
     }
   };
 
-  async function reload() {
-    setLoading(true);
+  async function reload(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const data = (await list({ data: { password } })) as any[];
       const currentIds = new Set(data.map((r) => `${r.tabla}-${r.id}`));
@@ -118,6 +119,9 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
       if (isNew && prevIds.current.size > 0 && typeof window !== "undefined") {
         try {
           const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          if (ctx.state === "suspended") {
+            ctx.resume();
+          }
           const o = ctx.createOscillator(); const g = ctx.createGain();
           o.frequency.value = 880; g.gain.value = 0.15;
           o.connect(g); g.connect(ctx.destination); o.start();
@@ -129,12 +133,14 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
       setError(null);
     } catch (e: any) {
       setError(e?.message ?? "Error");
-    } finally { setLoading(false); }
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }
 
   useEffect(() => {
     reload();
-    const id = setInterval(reload, 4000);
+    const id = setInterval(() => reload(true), 2000);
     return () => clearInterval(id);
   }, []);
 
@@ -150,7 +156,7 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
               <span className={`h-2 w-2 rounded-full ${loading ? "bg-sunset animate-pulse" : "bg-green-500"}`} />
               {loading ? "Actualizando…" : "En vivo"}
             </span>
-            <button onClick={reload} className="flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-mocha/20 hover:bg-crema">
+            <button onClick={() => reload(false)} className="flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-mocha/20 hover:bg-crema">
               <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refrescar
             </button>
             <button 
@@ -232,11 +238,22 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
                           {(r.detalles || r.notes) && <p className="rounded bg-white px-2 py-1 text-[11px] italic text-mocha">📝 {r.detalles || r.notes}</p>}
                           {r.total === 0 && (
                             <div className="mt-2 flex gap-1">
-                               <input type="number" placeholder="Total ($)" id={`price-${r.id}`} className="w-full rounded border border-mocha/20 px-2 py-1 text-xs outline-none focus:border-shocking" />
+                               <input 
+                                 type="number" 
+                                 placeholder="Total ($)" 
+                                 value={tempPrices[r.id] ?? ""}
+                                 onChange={(e) => setTempPrices(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                 className="w-full rounded border border-mocha/20 px-2 py-1 text-xs outline-none focus:border-shocking" 
+                               />
                                <button onClick={async () => {
-                                  const val = (document.getElementById(`price-${r.id}`) as HTMLInputElement).value;
+                                  const val = tempPrices[r.id];
                                   if (!val) return;
                                   await updateCustomOrder({ data: { password, id: r.id, total: Number(val) } });
+                                  setTempPrices(prev => {
+                                    const copy = { ...prev };
+                                    delete copy[r.id];
+                                    return copy;
+                                  });
                                   reload();
                                }} className="rounded bg-green-500 px-3 py-1 text-xs font-bold text-white hover:bg-green-600">OK</button>
                             </div>

@@ -1,17 +1,32 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import manosPostre from "@/assets/manos-postre.jpg";
 import { CounterStore } from "@/features/counter-store/CounterStore";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { RequireAdmin } from "@/features/admin/RequireAdmin";
 
 export const Route = createFileRoute("/admin/")({
-  component: Home,
+  component: () => (
+    <RequireAdmin>
+      <Home />
+    </RequireAdmin>
+  ),
 });
 
 function Home() {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Blindaje de hidratación: 
+  // Garantiza que ni CounterStore ni InstallPrompt se ejecuten en el servidor
+  if (!isClient) return null;
+
   return (
     <main className="min-h-screen bg-crema">
       <header className="mx-auto max-w-6xl px-6 pt-12 pb-8 text-center">
-        <p className="text-sm uppercase tracking-[0.3em] text-mocha">{"\n"}</p>
         <h1 className="mt-3 flex justify-center">
           <img
             src="/titulo_majito.png"
@@ -21,12 +36,10 @@ function Home() {
             className="h-auto w-full max-w-2xl"
           />
         </h1>
-        <p className="mt-2 text-xl italic text-foreground/70">{"\n"}</p>
       </header>
 
       <section className="mx-auto grid max-w-6xl items-center gap-8 px-6 pb-12 md:grid-cols-2">
         <div className="order-2 md:order-1">
-          <h2 className="text-3xl font-bold text-shocking md:text-4xl">{"\n"}</h2>
           <p className="mt-4 text-lg leading-relaxed text-foreground/85 text-justify hyphens-auto">
             Detrás de Majito hay un sueño que nació en el corazón de Tuxpan,
             Veracruz. Guiados por la frescura y la innovación de una joven promesa
@@ -68,6 +81,7 @@ function Home() {
             Ver mostrador completo →
           </Link>
         </div>
+        
         <CounterStore />
       </section>
 

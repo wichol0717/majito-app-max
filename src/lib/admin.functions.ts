@@ -43,7 +43,7 @@ export const adminUpdateSetting = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// PRODUCTS (inventario)
+// PRODUCTS
 export const adminListProducts = createServerFn({ method: "POST" })
   .inputValidator((d: { password: string }) => d)
   .handler(async ({ data }) => {
@@ -199,95 +199,163 @@ export const adminReports = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const s: any = await ensureAdmin(data.password);
     const days = Math.max(1, Math.min(365, data.days ?? 30));
-    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    const startDateIso = startDate.toISOString();
 
-    const [c, g, cake, ev, cust] = await Promise.all([
-      s.from("counter_orders").select("id,total_paid,status,items,created_at,payment_method,customer_name,customer_whatsapp").gte("created_at", since),
-      s.from("gift_orders").select("id,total_paid,total,status,items,created_at,payment_method,customer_name,buyer_name,customer_whatsapp,buyer_whatsapp").gte("created_at", since),
-      s.from("custom_cake_orders").select("id,total_price,deposit_paid,status,created_at,customer_name,customer_whatsapp").gte("created_at", since),
-      s.from("event_bookings").select("id,total_price,deposit_paid,status,categoria,personas,created_at,customer_name,customer_whatsapp").gte("created_at", since),
-      s.from("customers").select("whatsapp,name,total_orders,total_spent,last_order_at,origen").order("total_spent", { ascending: false }).limit(20),
-    ]);
-    for (const r of [c, g, cake, ev, cust]) if (r.error) throw r.error;
+    // 1. Consultamos la nueva vista unificada
+    const { data: orders, error: ordersError } = await s
+      .from("vista_reportes_unificados")
+      .select("*")
+      .gte("created_at", startDateIso)
+      .neq("status", "canceled");
 
-    const isCancelled = (st?: string) => (st ?? "").toUpperCase() === "CANCELLED";
+    if (ordersError) throw ordersError;
 
-    const counter = (c.data ?? []).filter((r: any) => !isCancelled(r.status));
-    const gifts = (g.data ?? []).filter((r: any) => !isCancelled(r.status));
-    const cakes = (cake.data ?? []).filter((r: any) => !isCancelled(r.status));
-    const events = (ev.data ?? []).filter((r: any) => !isCancelled(r.status));
+    // Inicializamos acumuladores de datos
+    let totalIngresos = 0;
+    const ingresos = { mostrador: 0, regalos: 0, pasteles: 0, eventos: 0 };
+    const pedidos = { mostrador: 0, regalos: 0, pasteles: 0, eventos: 0 };
 
-    const sum = (arr: any[], k: string) => arr.reduce((a, r) => a + Number(r[k] ?? 0), 0);
+    const metodosMap: Record<string, { pedidos: number; monto: number }> = {};
+    const clientesMap: Record<string, { name: string; whatsapp: string; total_orders: number; total_spent: number; origen: string }> = {};
 
-    const ingresos = {
-      mostrador: sum(counter, "total_paid"),
-      regalos: gifts.reduce((a: number, r: any) => a + Number(r.total_paid ?? r.total ?? 0), 0),
-      pasteles: sum(cakes, "deposit_paid"),
-      eventos: sum(events, "deposit_paid"),
-    };
-    const totalIngresos = ingresos.mostrador + ingresos.regalos + ingresos.pasteles + ingresos.eventos;
+    // Rellenamos el mapa de días para garantizar una gráfica continua sin huecos temporales
+    const ventasPorDiaMap: Record<string, number> = {};
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split("T")[0];
+      ventasPorDiaMap[key] = 0;
+    }
 
-    const pedidos = {
-      mostrador: counter.length,
-      regalos: gifts.length,
-      pasteles: cakes.length,
-      eventos: events.length,
-    };
-    const totalPedidos = pedidos.mostrador + pedidos.regalos + pedidos.pasteles + pedidos.eventos;
+    // Procesamos cada pedido de la vista unificada
+    orders?.forEach((order: any) => {
+      const total = Number(order.total) || 0;
+      totalIngresos += total;
 
-    // Ventas por día (mostrador + regalos)
-    const byDay = new Map<string, number>();
-    const addDay = (created: string, amount: number) => {
-      const d = created.slice(0, 10);
-      byDay.set(d, (byDay.get(d) ?? 0) + amount);
-    };
-    counter.forEach((r: any) => addDay(r.created_at, Number(r.total_paid ?? 0)));
-    gifts.forEach((r: any) => addDay(r.created_at, Number(r.total_paid ?? r.total ?? 0)));
-    cakes.forEach((r: any) => addDay(r.created_at, Number(r.deposit_paid ?? 0)));
-    events.forEach((r: any) => addDay(r.created_at, Number(r.deposit_paid ?? 0)));
-    const ventasPorDia = Array.from(byDay.entries()).map(([fecha, monto]) => ({ fecha, monto })).sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-    // Top productos (mostrador + regalos, desde items jsonb)
-    const prodMap = new Map<string, { nombre: string; cantidad: number; ingresos: number }>();
-    const addItems = (items: any) => {
-      if (!Array.isArray(items)) return;
-      for (const it of items) {
-        const nombre = String(it?.nombre ?? it?.name ?? "—");
-        const qty = Number(it?.cantidad ?? it?.qty ?? it?.quantity ?? 1);
-        const precio = Number(it?.precio ?? it?.price ?? 0);
-        const cur = prodMap.get(nombre) ?? { nombre, cantidad: 0, ingresos: 0 };
-        cur.cantidad += qty;
-        cur.ingresos += qty * precio;
-        prodMap.set(nombre, cur);
+      // Desglose por canal
+      const canal = order.canal as "mostrador" | "regalos" | "pasteles";
+      if (ingresos[canal] !== undefined) {
+        ingresos[canal] += total;
+        pedidos[canal] += 1;
       }
-    };
-    counter.forEach((r: any) => addItems(r.items));
-    gifts.forEach((r: any) => addItems(r.items));
-    const topProductos = Array.from(prodMap.values()).sort((a, b) => b.cantidad - a.cantidad).slice(0, 10);
 
-    // Métodos de pago (mostrador + regalos)
-    const metMap = new Map<string, { metodo: string; pedidos: number; monto: number }>();
-    const addMet = (m: string, amt: number) => {
-      const key = m || "—";
-      const cur = metMap.get(key) ?? { metodo: key, pedidos: 0, monto: 0 };
-      cur.pedidos += 1;
-      cur.monto += amt;
-      metMap.set(key, cur);
-    };
-    counter.forEach((r: any) => addMet(r.payment_method, Number(r.total_paid ?? 0)));
-    gifts.forEach((r: any) => addMet(r.payment_method, Number(r.total_paid ?? r.total ?? 0)));
-    const metodos = Array.from(metMap.values()).sort((a, b) => b.monto - a.monto);
+      // Métodos de pago unificados
+      const metodo = order.metodo_pago || "Sin especificar";
+      if (!metodosMap[metodo]) {
+        metodosMap[metodo] = { pedidos: 0, monto: 0 };
+      }
+      metodosMap[metodo].pedidos += 1;
+      metodosMap[metodo].monto += total;
+
+      // Agrupación por días
+      const fecha = new Date(order.created_at).toISOString().split("T")[0];
+      if (ventasPorDiaMap[fecha] !== undefined) {
+        ventasPorDiaMap[fecha] += total;
+      } else {
+        ventasPorDiaMap[fecha] = total;
+      }
+
+      // Agrupación de clientes top (excluyendo genéricos para limpiar la tabla)
+      const clienteKey = (order.cliente || "").trim();
+      const esGenerico = ["Cliente Mostrador", "Cliente Regalo", "Cliente Pastel", "Cliente Desconocido", ""].includes(clienteKey);
+      
+      if (!esGenerico) {
+        if (!clientesMap[clienteKey]) {
+          clientesMap[clienteKey] = {
+            name: clienteKey,
+            whatsapp: order.whatsapp || "—",
+            total_orders: 0,
+            total_spent: 0,
+            origen: order.canal === "mostrador" ? "Mostrador" : order.canal === "regalos" ? "Regalos" : "Pasteles"
+          };
+        }
+        clientesMap[clienteKey].total_orders += 1;
+        clientesMap[clienteKey].total_spent += total;
+        if (order.whatsapp && clientesMap[clienteKey].whatsapp === "—") {
+          clientesMap[clienteKey].whatsapp = order.whatsapp;
+        }
+      }
+    });
+
+    const totalPedidos = orders?.length || 0;
+    const ticketPromedio = totalPedidos > 0 ? totalIngresos / totalPedidos : 0;
+
+    // Formateamos las ventas por día ordenadas cronológicamente
+    const ventasPorDia = Object.entries(ventasPorDiaMap)
+      .map(([fecha, monto]) => ({ fecha, monto }))
+      .sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    // Formateamos los métodos de pago
+    const metodos = Object.entries(metodosMap)
+      .map(([metodo, m]) => ({ metodo, pedidos: m.pedidos, monto: m.monto }))
+      .sort((a, b) => b.monto - a.monto);
+
+    // Formateamos los clientes top ordenados descendentemente
+    const topClientes = Object.values(clientesMap)
+      .sort((a, b) => b.total_spent - a.total_spent)
+      .slice(0, 10);
+
+    // --- PROCESAMIENTO DE PRODUCTOS TOP ---
+    const productosMap: Record<string, { nombre: string; cantidad: number; ingresos: number }> = {};
+
+    // Consultamos los productos de regalos del periodo
+    const { data: giftOrders } = await s
+      .from("gift_orders")
+      .select("gift_items")
+      .gte("created_at", startDateIso)
+      .neq("status", "canceled");
+
+    giftOrders?.forEach((o: any) => {
+      const items = Array.isArray(o.gift_items) ? o.gift_items : [];
+      items.forEach((it: any) => {
+        const nombre = (it.nombre || it.name || it.title || "Producto").toUpperCase();
+        const cant = Number(it.qty || it.cantidad || 1);
+        const precio = Number(it.precio || it.price || 0);
+        if (!productosMap[nombre]) {
+          productosMap[nombre] = { nombre, cantidad: 0, ingresos: 0 };
+        }
+        productosMap[nombre].cantidad += cant;
+        productosMap[nombre].ingresos += (precio * cant);
+      });
+    });
+
+    // Consultamos los productos de mostrador del periodo
+    const { data: counterOrders } = await s
+      .from("counter_orders")
+      .select("*")
+      .gte("created_at", startDateIso)
+      .neq("status", "canceled");
+
+    counterOrders?.forEach((o: any) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      items.forEach((it: any) => {
+        const nombre = (it.nombre || it.name || it.title || "Producto").toUpperCase();
+        const cant = Number(it.qty || it.cantidad || 1);
+        const precio = Number(it.precio || it.price || 0);
+        if (!productosMap[nombre]) {
+          productosMap[nombre] = { nombre, cantidad: 0, ingresos: 0 };
+        }
+        productosMap[nombre].cantidad += cant;
+        productosMap[nombre].ingresos += (precio * cant);
+      });
+    });
+
+    const topProductos = Object.values(productosMap)
+      .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 10);
 
     return {
       days,
       totalIngresos,
       totalPedidos,
-      ticketPromedio: totalPedidos ? totalIngresos / totalPedidos : 0,
+      ticketPromedio,
       ingresos,
       pedidos,
       ventasPorDia,
       topProductos,
       metodos,
-      topClientes: cust.data ?? [],
+      topClientes
     };
   });
