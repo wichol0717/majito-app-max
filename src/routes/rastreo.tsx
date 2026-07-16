@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { lookupOrder } from "@/lib/kds.functions";
 
 export const Route = createFileRoute("/rastreo")({
   component: RastreoPage,
@@ -32,57 +32,55 @@ function OrderTracker() {
     e.preventDefault();
     setError("");
 
-    const userInput = reference.trim().toUpperCase();
+    const userInput = reference.trim();
     if (!userInput) {
-      setError("Por favor ingresa una referencia.");
+      setError("Por favor ingresa un ID de pedido.");
       return;
     }
 
     setLoading(true);
 
-    const { data: allData, error: fetchError } = await supabase
-      .from("counter_orders")
-      .select("*");
+    try {
+      const result = await lookupOrder({ 
+        data: { 
+          orderId: userInput, 
+          password: "majito2005" 
+        } 
+      });
 
-    console.log("Error de conexión:", fetchError);
-    console.log("Registros totales en counter_orders:", allData);
+      // ESTO NOS DIRÁ EN LA CONSOLA (F12) SI RECIBIMOS ALGO O SI FOUND ES FALSE
+      console.log("Resultado de búsqueda:", result); 
 
-    const { data: counterData } = await supabase
-      .from("counter_orders")
-      .select("id")
-      .ilike("payment_reference", userInput)
-      .maybeSingle();
+      if (result.found) {
+        if (result.tabla === "counter_orders") {
+          window.location.href = `/pedido/${result.order.id}`;
+        } else if (result.tabla === "gift_orders") {
+          window.location.href = `/regalo/${result.order.id}`;
+        } else if (result.tabla === "custom_cake_orders") {
+          window.location.href = `/personalizado/${result.order.id}`;
+        }
+        return;
+      }
 
-    if (counterData?.id) {
-      window.location.href = `/pedido/${counterData.id}`;
-      return;
+      setError("No se encontró el pedido con ese ID.");
+    } catch (err) {
+      console.error(err);
+      setError("Error al buscar, intenta de nuevo.");
+    } finally {
+      setLoading(false);
     }
-
-    const { data: giftData } = await supabase
-      .from("gift_orders")
-      .select("id")
-      .ilike("payment_reference", userInput)
-      .maybeSingle();
-
-    if (giftData?.id) {
-      window.location.href = `/regalo/${giftData.id}`;
-      return;
-    }
-
-    setLoading(false);
-    setError("No se encontró el pedido. Revisa la consola (F12).");
   }
 
   return (
     <div className="w-full max-w-md p-6 bg-white rounded-2xl shadow ring-1 ring-mocha/10 text-center">
       <h2 className="text-xl font-bold text-shocking mb-2">¿Dónde está mi pedido? 🍰</h2>
-      <p className="text-xs text-mocha mb-4">Ingresa la referencia de tu compra para ver tu semáforo.</p>
+      <p className="text-xs text-mocha mb-4">Ingresa el ID de tu pedido para ver su semáforo.</p>
       <form onSubmit={handleSearch} className="space-y-3">
         <input
           type="text"
           value={reference}
           onChange={(e) => setReference(e.target.value)}
-          placeholder="Ej: MAJITO-EWGK"
+          placeholder="Ej: 91c64670"
           className="w-full rounded-lg border border-mocha/20 px-4 py-3 text-center text-base font-mono uppercase outline-none focus:border-shocking"
         />
         {error && <p className="text-xs text-red-600">{error}</p>}

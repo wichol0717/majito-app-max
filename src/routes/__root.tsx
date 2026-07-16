@@ -88,14 +88,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Pasteles personalizados, galletas, El Carrito de eventos y línea de regalos. Hecho a mano en Tuxpan, Veracruz.",
+          "Pasteles personalizado, galletas, El Carrito de eventos y línea de regalos. Hecho a mano en Tuxpan, Veracruz.",
       },
       { name: "author", content: "Majito Cake" },
       { property: "og:title", content: "Majito Cake — It's Max" },
       {
         property: "og:description",
         content:
-          "Cuádruple tracción: Mostrador, Personalizados, Eventos y Regalos. Cero comisiones, 100% Tuxpan.",
+          "Cuádruple tracción: Mostrador, Personalizado, Eventos y Regalos. Cero comisiones, 100% Tuxpan.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -115,33 +115,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
-  shellComponent: RootShell,
+  // Quitamos 'shellComponent' para evitar desajustes del SSR con el cliente
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
 
-function RootShell({ children }: { children: ReactNode }) {
+// Unificamos toda la estructura en un único flujo de renderizado controlado
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <QueryClientProvider client={queryClient}>
+          <Outlet />
+        </QueryClientProvider>
         <Scripts />
       </body>
     </html>
-  );
-}
-
-function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-    </QueryClientProvider>
   );
 }

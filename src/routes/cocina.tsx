@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Lock, RefreshCw } from "lucide-react";
-import { verifyKdsPassword, kdsListActiveOrders, kdsAdvanceOrder } from "@/lib/kds.functions";
+import { ArrowRight, Lock, RefreshCw, Gift, MessageCircle, Camera } from "lucide-react";
+import { verifyKdsPassword, kdsListActiveOrders, kdsAdvanceOrder, updateCustomOrder, updateOrderReceipt, cancelOrder, deleteOrderReceipt, batchCleanupReceipts } from "@/lib/kds.functions";
+import { supabase } from "@/api/supabase";
 
 const KEY = "majito_kds_pass";
 
@@ -74,10 +75,43 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tempPrices, setTempPrices] = useState<Record<string, string>>({});
   const prevIds = useRef<Set<string>>(new Set());
 
-  async function reload() {
-    setLoading(true);
+  const formatWaNumber = (phone: any) => {
+    if (!phone) return "";
+    const cleaned = String(phone).replace(/[^0-9]/g, "");
+    if (cleaned.length === 10) return `52${cleaned}`;
+    if (cleaned.length === 12 && cleaned.startsWith("52")) return cleaned;
+    if (cleaned.length === 13 && cleaned.startsWith("521")) return `52${cleaned.slice(3)}`;
+    return cleaned;
+  };
+
+  const handleUploadReceipt = async (e: React.ChangeEvent<HTMLInputElement>, orderId: string, tabla: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const fileName = `receipts/${orderId}_${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from("comprobantes-pago").upload(fileName, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: { publicUrl } } = supabase.storage.from("comprobantes-pago").getPublicUrl(fileName);
+
+      await updateOrderReceipt({ data: { password, id: orderId, tabla: tabla as any, payment_receipt_url: publicUrl } });
+
+      setRows((prevRows) => 
+        prevRows.map((r) => 
+          r.id === orderId ? { ...r, payment_receipt_url: publicUrl } : r
+        )
+      );
+      alert("Comprobante subido correctamente");
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar: " + (err as Error).message);
+    }
+  };
+
+  async function reload(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const data = (await list({ data: { password } })) as any[];
       const currentIds = new Set(data.map((r) => `${r.tabla}-${r.id}`));
@@ -85,6 +119,9 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
       if (isNew && prevIds.current.size > 0 && typeof window !== "undefined") {
         try {
           const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+          if (ctx.state === "suspended") {
+            ctx.resume();
+          }
           const o = ctx.createOscillator(); const g = ctx.createGain();
           o.frequency.value = 880; g.gain.value = 0.15;
           o.connect(g); g.connect(ctx.destination); o.start();
@@ -96,12 +133,14 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
       setError(null);
     } catch (e: any) {
       setError(e?.message ?? "Error");
-    } finally { setLoading(false); }
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }
 
   useEffect(() => {
     reload();
-    const id = setInterval(reload, 4000);
+    const id = setInterval(() => reload(true), 2000);
     return () => clearInterval(id);
   }, []);
 
@@ -117,16 +156,31 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
               <span className={`h-2 w-2 rounded-full ${loading ? "bg-sunset animate-pulse" : "bg-green-500"}`} />
               {loading ? "Actualizando…" : "En vivo"}
             </span>
-            <button onClick={reload} className="flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-mocha/20 hover:bg-crema">
+            <button onClick={() => reload(false)} className="flex items-center gap-1 rounded-full bg-white px-3 py-1 ring-1 ring-mocha/20 hover:bg-crema">
               <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} /> Refrescar
+            </button>
+            <button 
+              onClick={async () => {
+                  const confirmar = window.confirm("¿Ejecutar limpieza masiva de recibos en pedidos finalizados? Esto borrará permanentemente las imágenes de los pedidos ya entregados.");
+                  if (confirmar) {
+                      try {
+                          const res = await batchCleanupReceipts({ data: { password } });
+                          alert(`Limpieza completada. Se borraron ${res.totalDeleted} recibos.`);
+                          reload();
+                      } catch (e) {
+                          alert("Error al limpiar: " + (e as Error).message);
+                      }
+                  }
+              }}
+              className="flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-red-600 hover:bg-red-200 transition-all"
+            >
+              🧹 Limpiar
             </button>
             <button onClick={onLogout} className="rounded-full bg-mocha/10 px-3 py-1 hover:bg-mocha/20">Salir</button>
           </div>
         </div>
       </header>
-
       {error && <p className="mx-auto max-w-7xl px-6 pt-4 text-sm text-red-600">{error}</p>}
-
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-4 px-4 pt-6 md:grid-cols-2 lg:grid-cols-4">
         {COLUMNS.map((col) => {
           const items = byCol(col.key);
@@ -143,42 +197,163 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
                 {items.map((r) => {
                   const mins = Math.floor((Date.now() - new Date(r.created_at).getTime()) / 60000);
                   const late = mins >= 20;
+                  const identifier = r.payment_reference || r.id.slice(0, 8);
+                  
                   return (
                     <article key={`${r.tabla}-${r.id}`} className={`rounded-xl border p-3 ${late ? "border-red-400 bg-red-50" : "border-mocha/15 bg-crema/40"}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="font-mono text-[11px] font-bold text-shocking">{r.payment_reference ?? String(r.id).slice(0, 8)}</p>
-                          <p className="text-sm font-semibold text-foreground">{r.cliente}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-mono text-[11px] font-bold text-shocking">{identifier}</p>
+                            {r.tabla === "custom_cake_orders" && (
+                              <button onClick={async () => {
+                                if (confirm("¿Cancelar este pedido?")) {
+                                  await cancelOrder({ data: { password, id: r.id, tabla: r.tabla } });
+                                  reload();
+                                }
+                              }} className="rounded-full bg-red-100 px-1.5 py-0 text-[10px] font-bold text-red-600 hover:bg-red-200">✕</button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <p className="text-sm font-semibold text-foreground">{r.cliente || r.customer_name || r.nombre_cliente}</p>
+                            {(r.telefono || r.customer_whatsapp) && (
+                              <a href={`https://wa.me/${formatWaNumber(r.telefono || r.customer_whatsapp)}`} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-green-600 underline">WP</a>
+                            )}
+                          </div>
                           <p className="text-[10px] uppercase text-mocha">
-                            {r.tabla === "gift_orders" ? "Regalo" : "Mostrador"} · {r.metodo?.toUpperCase() ?? "—"}
+                            {r.tabla === "gift_orders" ? "Regalo" : r.tabla === "custom_cake_orders" ? "Personalizado" : "Mostrador"} 
+                            {r.metodo ? ` · ${r.metodo.toUpperCase()}` : ""}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-shocking">${Number(r.total).toFixed(0)}</p>
+                          {r.total > 0 && <p className="text-sm font-bold text-shocking">${Number(r.total).toFixed(0)}</p>}
                           <p className={`text-[10px] font-bold ${late ? "text-red-600" : "text-mocha"}`}>{mins}m</p>
                         </div>
                       </div>
-                      {r.items && Array.isArray(r.items) && (
-                        <ul className="mt-2 space-y-0.5 text-[11px] text-mocha">
-                          {r.items.slice(0, 6).map((it: any, i: number) => (
-                            <li key={i}>• {it.qty ?? it.cantidad ?? 1}× {it.nombre ?? it.name ?? it.title ?? "producto"}</li>
-                          ))}
-                        </ul>
+
+                      {r.tabla === "custom_cake_orders" ? (
+                        <div className="mt-2 space-y-2">
+                          <p className="text-xs font-semibold text-shocking">Sabor: {r.flavor_chosen}</p>
+                          <p className="text-xs text-mocha">Entrega: {r.delivery_date}</p>
+                          {(r.detalles || r.notes) && <p className="rounded bg-white px-2 py-1 text-[11px] italic text-mocha">📝 {r.detalles || r.notes}</p>}
+                          {r.total === 0 && (
+                            <div className="mt-2 flex gap-1">
+                               <input 
+                                 type="number" 
+                                 placeholder="Total ($)" 
+                                 value={tempPrices[r.id] ?? ""}
+                                 onChange={(e) => setTempPrices(prev => ({ ...prev, [r.id]: e.target.value }))}
+                                 className="w-full rounded border border-mocha/20 px-2 py-1 text-xs outline-none focus:border-shocking" 
+                               />
+                               <button onClick={async () => {
+                                  const val = tempPrices[r.id];
+                                  if (!val) return;
+                                  await updateCustomOrder({ data: { password, id: r.id, total: Number(val) } });
+                                  setTempPrices(prev => {
+                                    const copy = { ...prev };
+                                    delete copy[r.id];
+                                    return copy;
+                                  });
+                                  reload();
+                               }} className="rounded bg-green-500 px-3 py-1 text-xs font-bold text-white hover:bg-green-600">OK</button>
+                            </div>
+                          )}
+                          {r.reference_image_url && (
+                               <a href={r.reference_image_url} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-1 rounded-full bg-blue-500 py-2 text-[10px] font-bold text-white hover:bg-blue-600 transition-all">
+                                  <Camera className="h-3 w-3" /> Ver Foto Referencia
+                               </a>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                           {r.items && Array.isArray(r.items) && (
+                            <ul className="mt-2 space-y-0.5 text-[11px] text-mocha">
+                              {r.items.slice(0, 6).map((it: any, i: number) => (
+                                <li key={i}>• {it.qty ?? it.cantidad ?? 1}× {it.nombre ?? it.name ?? it.title ?? "producto"}</li>
+                              ))}
+                            </ul>
+                          )}
+                          {r.notas && <p className="mt-2 rounded bg-white px-2 py-1 text-[11px] italic text-mocha">📝 {r.notas}</p>}
+                          {r.dedicatoria && <p className="mt-2 rounded bg-pink-50 px-2 py-1 text-[11px] italic text-rose-600">💌 {r.dedicatoria}</p>}
+                        </>
                       )}
-                      {r.notas && <p className="mt-2 rounded bg-white px-2 py-1 text-[11px] italic text-mocha">📝 {r.notas}</p>}
+                      
+                      {/* BOTÓN UNIVERSAL DE RECIBO */}
+                      <div className="mt-3">
+                        {r.payment_receipt_url ? (
+                            <div className="flex gap-2">
+                                <a href={r.payment_receipt_url} target="_blank" rel="noreferrer" className="flex flex-1 items-center justify-center gap-1 rounded-full bg-emerald-500 py-2 text-[10px] font-bold text-white hover:bg-emerald-600 transition-all">
+                                  📄 Ver Recibo
+                                </a>
+                                <button 
+                                  onClick={async () => {
+                                      if (confirm("¿Seguro que quieres borrar este recibo del servidor?")) {
+                                          await deleteOrderReceipt({ 
+                                            data: { 
+                                              password, 
+                                              id: r.id, 
+                                              tabla: r.tabla, 
+                                              url: r.payment_receipt_url, 
+                                              bucketName: "comprobantes-pago" 
+                                            } 
+                                          });
+                                          reload();
+                                      }
+                                  }}
+                                  className="rounded-full bg-red-500 px-3 py-2 text-[10px] font-bold text-white hover:bg-red-600 transition-all"
+                                >
+                                  🗑️
+                                </button>
+                            </div>
+                          ) : (
+                            <label className="flex w-full cursor-pointer items-center justify-center gap-1 rounded-full bg-amber-500 py-2 text-[10px] font-bold text-white hover:bg-amber-600 transition-all">
+                              <Camera className="h-3 w-3" /> Subir Recibo
+                              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadReceipt(e, r.id, r.tabla)} />
+                            </label>
+                        )}
+                      </div>
+
+                      {r.tabla === "gift_orders" && (
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                            <Link to="/regalo/$id" params={{ id: identifier }} target="_blank" className="flex w-full items-center justify-center gap-1 rounded-full bg-emerald-600 py-2 text-xs font-bold text-white active:scale-[0.98]">
+                                <Gift className="h-3 w-3" /> Ver
+                            </Link>
+                            <button onClick={() => {
+                                    const phone = formatWaNumber(r.recipient_whatsapp || r.customer_whatsapp || r.telefono || "");
+                                    if (phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`¡Hola! Tienes una sorpresa dulce de Majito Cake. Pedido: ${identifier}`)}`, '_blank');
+                                }} className="flex w-full items-center justify-center gap-1 rounded-full bg-green-500 py-2 text-xs font-bold text-white active:scale-[0.98]">
+                                <MessageCircle className="h-3 w-3" /> Enviar
+                            </button>
+                        </div>
+                      )}
+
                       {col.key !== "en_camino" ? (
-                        <button
-                          onClick={async () => {
-                            await advance({ data: { password, id: r.id, tabla: r.tabla, current: r.delivery_status } });
-                            reload();
-                          }}
-                          className="mt-2 flex w-full items-center justify-center gap-1 rounded-full bg-shocking py-2 text-xs font-bold text-white active:scale-[0.98]">
-                          <ArrowRight className="h-3 w-3" /> Avanzar a {LABELS[
-                            col.key === "validando_pago" ? "en_cocina" :
-                            col.key === "en_cocina" ? "listo" :
-                            col.key === "listo" ? "en_camino" : "en_camino"
-                          ]}
-                        </button>
+                        <>
+                          {col.key === "listo" && (
+                            <button
+                              onClick={() => {
+                                const phone = formatWaNumber(r.telefono || r.customer_whatsapp);
+                                const message = `¡Hola! Tu pedido está listo. 🎂 Te compartimos una foto. Por favor apóyanos liquidando el saldo pendiente (Total: $${r.total}). Quedamos pendientes.`;
+                                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                              }}
+                              className="mt-2 flex w-full items-center justify-center gap-1 rounded-full bg-blue-500 py-2 text-xs font-bold text-white active:scale-[0.98]"
+                            >
+                              <MessageCircle className="h-3 w-3" /> Cobrar Saldo
+                            </button>
+                          )}
+                          <button
+                            onClick={async () => {
+                              await advance({ data: { password, id: r.id, tabla: r.tabla, current: r.delivery_status } });
+                              reload();
+                            }}
+                            className="mt-2 flex w-full items-center justify-center gap-1 rounded-full bg-shocking py-2 text-xs font-bold text-white active:scale-[0.98]">
+                            <ArrowRight className="h-3 w-3" /> Avanzar a {LABELS[
+                              col.key === "validando_pago" ? "en_cocina" :
+                              col.key === "en_cocina" ? "listo" :
+                              col.key === "listo" ? "en_camino" : "en_camino"
+                            ]}
+                          </button>
+                        </>
                       ) : (
                         <div className="mt-2 space-y-1">
                           <p className="text-center text-[10px] text-mocha">Repartidor en ruta</p>
@@ -202,7 +377,7 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
       </div>
 
       <p className="mx-auto mt-6 max-w-7xl px-6 text-center text-[11px] text-mocha">
-        Auto-refresco cada 4s · <Link to="/" className="hover:text-shocking">Volver al sitio</Link>
+        Auto-refresco cada 2s · <Link to="/" className="hover:text-shocking">Volver al sitio</Link>
       </p>
     </main>
   );

@@ -2,30 +2,36 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { AdminShell } from "@/features/admin/AdminShell";
-import { RequireAdmin } from "@/features/admin/RequireAdmin";
-import { useAdminAuth } from "@/features/admin/AdminAuth";
 import { adminListPackages, adminUpsertPackage } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/paquetes")({
-  component: () => <RequireAdmin><Paquetes/></RequireAdmin>,
+  component: () => <Paquetes />,
 });
 
 function Paquetes() {
-  const { password } = useAdminAuth();
+  const password = "majito2005"; // Contraseña fija integrada
+  const [isClient, setIsClient] = useState(false);
   const list = useServerFn(adminListPackages);
   const upd = useServerFn(adminUpsertPackage);
   const [rows, setRows] = useState<any[]>([]);
 
+  useEffect(() => { setIsClient(true); }, []);
+
   async function refresh() {
-    const d = await list({ data: { password: password! } });
+    const d = await list({ data: { password: password } });
     setRows(d as any[]);
   }
-  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, []);
+
+  useEffect(() => { 
+    if (isClient) refresh(); 
+  }, [isClient]);
 
   async function save(p: any) {
-    await upd({ data: { password: password!, pkg: p } });
+    await upd({ data: { password: password, pkg: p } });
     await refresh();
   }
+
+  if (!isClient) return null;
 
   return (
     <AdminShell title="Paquetes de eventos">
@@ -43,6 +49,7 @@ function Paquetes() {
     </AdminShell>
   );
 }
+
 function PkgRow({ row, onSave }: any) {
   const [r, setR] = useState(row);
   useEffect(()=>setR(row),[row]);

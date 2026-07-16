@@ -175,12 +175,12 @@ function CounterStoreInner() {
         <span aria-hidden className="pointer-events-none absolute -right-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-500/20 blur-3xl animate-pulse [animation-delay:600ms]" />
         <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-orange-200/20 to-transparent blur-md" />
         <Link
-          to="/personalizados"
+          to="/personalizado"
           className="relative flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sweet-pink/90 px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:-translate-y-0.5"
-          aria-label="Pasteles personalizados"
+          aria-label="Pasteles personalizado"
         >
           <Cake className="h-4 w-4" />
-          <span className="hidden xs:inline sm:inline">Personalizados</span>
+          <span className="hidden xs:inline sm:inline">Personalizado</span>
         </Link>
         <Link
           to="/eventos"

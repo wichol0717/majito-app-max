@@ -251,6 +251,11 @@ export function CartPanel() {
       }
 
       for (const g of giftItems) {
+        // --- VALIDACIÓN CRÍTICA ---
+        if (!g.product.id) {
+             throw new Error("Error: No se pudo identificar el producto del regalo. Intenta de nuevo.");
+        }
+
         const key = g.giftDetails ? normalizarDir(g.giftDetails.recipientLocation) : "";
         const cobraEnvio = key && !yaCobradas.has(key);
         if (cobraEnvio) yaCobradas.add(key);
@@ -259,6 +264,7 @@ export function CartPanel() {
         const descRegalo = cuponAplicado ? +(subtRegalo * (cuponAplicado.pct / 100)).toFixed(2) : 0;
         const totalRegalo = Math.max(0, subtRegalo - descRegalo) + envio;
         const payload: any = {
+          product_id: g.product.id, // --- SE AGREGA EL ID ---
           customer_name: g.giftDetails?.buyerName ?? buyerName.trim(),
           customer_whatsapp: g.giftDetails?.buyerWhatsapp ?? buyerWhatsapp.trim(),
           total_paid: totalRegalo,
@@ -344,11 +350,11 @@ export function CartPanel() {
     <aside className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-lg ring-1 ring-mocha/10">
       <div className="grid grid-cols-2 gap-2">
         <Link
-          to="/personalizados"
+          to="/personalizado"
           className="flex items-center justify-center gap-2 rounded-full bg-sweet-pink px-3 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
           <span className="text-[10px] font-bold opacity-60">B</span>
-          Personalizados
+          Personalizado
         </Link>
         <Link
           to="/eventos"
@@ -377,7 +383,7 @@ export function CartPanel() {
               {i.product.img ? (
                 <img
                   src={i.product.img}
-                  alt={i.product.nombre}
+                  alt={i.product.nombre ?? undefined}
                   className="h-16 w-16 flex-none rounded-lg object-cover"
                 />
               ) : (
@@ -439,7 +445,7 @@ export function CartPanel() {
                 {esPastel && (
                   <div className="mt-2">
                     <label className="mb-1 flex items-center gap-1 text-[11px] font-semibold text-shocking">
-                      <Cake className="h-3 w-3"/> Mensaje en el pastel (máx. 60)
+                      <Cake className="h-3 w-3"/> Escribe el mensaje del pastel en cada producto de la lista.
                     </label>
                     <input
                       value={i.cakeMessage ?? ""}
@@ -690,7 +696,8 @@ export function CartPanel() {
             puedeConfirmarSpei ? "bg-shocking hover:bg-shocking/90" : "cursor-not-allowed bg-mocha/30"
           }`}
         >
-          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar pedido SPEI"}
+          {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+          {enviando ? "Procesando..." : "Confirmar pago SPEI"}
         </button>
       )}
     </aside>

@@ -3,7 +3,7 @@
 
 const columnas = [
   { id: "mostrador", titulo: "Mostrador", color: "bg-shocking", ruta: "A" },
-  { id: "personalizados", titulo: "Personalizados", color: "bg-sweet-pink", ruta: "B" },
+  { id: "personalizado", titulo: "Personalizado", color: "bg-sweet-pink", ruta: "B" },
   { id: "eventos", titulo: "Eventos", color: "bg-mocha", ruta: "C" },
   { id: "regalos", titulo: "Regalos", color: "bg-sunset", ruta: "D" },
 ];

@@ -1,4 +1,4 @@
-// [Módulo: features/event-booking] -> [Archivo: EventCalendar.tsx] -> [Acción: CREAR]
+// [Módulo: features/event-booking] -> [Archivo: EventCalendar.tsx]
 // Ruta C: Calendario de eventos con reglas del Manifiesto Parte III Caso C:
 //   - No pasado
 //   - Anti-empalmes (1 evento por día)
@@ -19,7 +19,18 @@ interface Pkg {
   requiere_cotizacion: boolean;
 }
 
-export function EventCalendar() {
+interface EventCalendarProps {
+  onRegister: (bookingData: {
+    client_name: string;
+    client_whatsapp: string;
+    fecha_evento: string;
+    event_address: string;
+    package_name: string;
+    total_price: number;
+  }) => Promise<void>;
+}
+
+export function EventCalendar({ onRegister }: EventCalendarProps) {
   const STORAGE_KEY = "majito.event-booking.v1";
   type Persisted = {
     seleccionada: string | null;
@@ -64,13 +75,15 @@ export function EventCalendar() {
   }, [seleccionada, categoria, personas, direccion, nombre, whatsapp]);
 
   useEffect(() => {
+    // CORRECCIÓN: Eliminamos 'status' y el filtro .in() ya que no existen en la BD.
+    // Solo consultamos las fechas que ya tienen un evento registrado.
     supabase
       .from("event_bookings")
-      .select("event_date, status")
-      .in("status", ["HELD_24H", "VERIFIED"])
+      .select("fecha_evento")
       .then(({ data }) => {
-        setOcupadas(new Set((data ?? []).map((r) => r.event_date)));
+        setOcupadas(new Set((data ?? []).map((r) => r.fecha_evento as string)));
       });
+      
     supabase
       .from("event_packages")
       .select("*")
@@ -113,9 +126,28 @@ export function EventCalendar() {
     ? `https://wa.me/${settings.whatsapp_number}?text=${encodeURIComponent(mensajeWA)}`
     : undefined;
 
+  const handleApartar = async (e: React.MouseEvent) => {
+    if (!puedeReservar || !seleccionada || !pkg) {
+      e.preventDefault();
+      return;
+    }
+    try {
+      await onRegister({
+        client_name: nombre,
+        client_whatsapp: whatsapp,
+        fecha_evento: seleccionada,
+        event_address: direccion,
+        package_name: pkg.nombre,
+        total_price: pkg.precio ?? 0,
+      });
+    } catch (err) {
+      e.preventDefault();
+      alert("Hubo un error al guardar tu reserva. Por favor intenta de nuevo.");
+    }
+  };
+
   return (
     <div>
-      {/* Paso 1: Categoría */}
       <div className="mb-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-mocha">1 · Categoría</p>
         <div className="grid grid-cols-2 gap-2">
@@ -131,7 +163,6 @@ export function EventCalendar() {
         </div>
       </div>
 
-      {/* Paso 2: Tamaño */}
       {categoria && (
         <div className="mb-4">
           <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-mocha">2 · Personas</p>
@@ -159,34 +190,17 @@ export function EventCalendar() {
         </div>
       )}
 
-      {/* Paso 3: Calendario */}
       {categoria && personas && (
         <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-mocha">3 · Fecha del evento</p>
       )}
       <div className="mb-4 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setMes(retrocederMes(mes))}
-          className="rounded-full bg-white px-4 py-2 text-sm shadow-sm ring-1 ring-mocha/20"
-        >
-          ←
-        </button>
-        <h3 className="text-xl font-bold capitalize text-mocha">
-          {nombreMes(mes.anio, mes.mes)}
-        </h3>
-        <button
-          type="button"
-          onClick={() => setMes(avanzarMes(mes))}
-          className="rounded-full bg-white px-4 py-2 text-sm shadow-sm ring-1 ring-mocha/20"
-        >
-          →
-        </button>
+        <button type="button" onClick={() => setMes(retrocederMes(mes))} className="rounded-full bg-white px-4 py-2 text-sm shadow-sm ring-1 ring-mocha/20">←</button>
+        <h3 className="text-xl font-bold capitalize text-mocha">{nombreMes(mes.anio, mes.mes)}</h3>
+        <button type="button" onClick={() => setMes(avanzarMes(mes))} className="rounded-full bg-white px-4 py-2 text-sm shadow-sm ring-1 ring-mocha/20">→</button>
       </div>
 
       <div className="grid grid-cols-7 gap-2 text-center text-xs uppercase tracking-widest text-mocha">
-        {["D", "L", "M", "M", "J", "V", "S"].map((d, i) => (
-          <div key={i}>{d}</div>
-        ))}
+        {["D", "L", "M", "M", "J", "V", "S"].map((d, i) => <div key={i}>{d}</div>)}
       </div>
 
       <div className="mt-2 grid grid-cols-7 gap-2">
@@ -240,7 +254,7 @@ export function EventCalendar() {
           <a href={puedeReservar ? whatsappUrl : undefined}
             target="_blank" rel="noreferrer"
             aria-disabled={!puedeReservar}
-            onClick={(e)=>{ if (!puedeReservar) e.preventDefault(); }}
+            onClick={handleApartar}
             className={`block w-full rounded-full px-6 py-3 text-center font-bold text-white ${puedeReservar?"bg-shocking hover:bg-shocking/90":"cursor-not-allowed bg-mocha/40"}`}>
             {pkg.requiere_cotizacion ? "Pedir cotización por WhatsApp" : "Apartar con anticipo del 50% por WhatsApp"}
           </a>

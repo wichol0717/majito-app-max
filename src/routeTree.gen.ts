@@ -11,7 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegalosRouteImport } from './routes/regalos'
 import { Route as RastreoRouteImport } from './routes/rastreo'
-import { Route as PersonalizadosRouteImport } from './routes/personalizados'
+import { Route as PersonalizadoRouteImport } from './routes/personalizado'
 import { Route as MostradorRouteImport } from './routes/mostrador'
 import { Route as EventosRouteImport } from './routes/eventos'
 import { Route as CocinaRouteImport } from './routes/cocina'
@@ -20,6 +20,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as RepartoIdRouteImport } from './routes/reparto.$id'
 import { Route as RegaloIdRouteImport } from './routes/regalo.$id'
+import { Route as PersonalizadoOrderIdRouteImport } from './routes/personalizado.$orderId'
 import { Route as PedidoIdRouteImport } from './routes/pedido.$id'
 import { Route as AdminReportesRouteImport } from './routes/admin.reportes'
 import { Route as AdminPedidosRouteImport } from './routes/admin.pedidos'
@@ -38,9 +39,9 @@ const RastreoRoute = RastreoRouteImport.update({
   path: '/rastreo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PersonalizadosRoute = PersonalizadosRouteImport.update({
-  id: '/personalizados',
-  path: '/personalizados',
+const PersonalizadoRoute = PersonalizadoRouteImport.update({
+  id: '/personalizado',
+  path: '/personalizado',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MostradorRoute = MostradorRouteImport.update({
@@ -82,6 +83,11 @@ const RegaloIdRoute = RegaloIdRouteImport.update({
   id: '/regalo/$id',
   path: '/regalo/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PersonalizadoOrderIdRoute = PersonalizadoOrderIdRouteImport.update({
+  id: '/$orderId',
+  path: '/$orderId',
+  getParentRoute: () => PersonalizadoRoute,
 } as any)
 const PedidoIdRoute = PedidoIdRouteImport.update({
   id: '/pedido/$id',
@@ -125,7 +131,7 @@ export interface FileRoutesByFullPath {
   '/cocina': typeof CocinaRoute
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
-  '/personalizados': typeof PersonalizadosRoute
+  '/personalizado': typeof PersonalizadoRouteWithChildren
   '/rastreo': typeof RastreoRoute
   '/regalos': typeof RegalosRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -135,6 +141,7 @@ export interface FileRoutesByFullPath {
   '/admin/pedidos': typeof AdminPedidosRoute
   '/admin/reportes': typeof AdminReportesRoute
   '/pedido/$id': typeof PedidoIdRoute
+  '/personalizado/$orderId': typeof PersonalizadoOrderIdRoute
   '/regalo/$id': typeof RegaloIdRoute
   '/reparto/$id': typeof RepartoIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -144,7 +151,7 @@ export interface FileRoutesByTo {
   '/cocina': typeof CocinaRoute
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
-  '/personalizados': typeof PersonalizadosRoute
+  '/personalizado': typeof PersonalizadoRouteWithChildren
   '/rastreo': typeof RastreoRoute
   '/regalos': typeof RegalosRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -154,6 +161,7 @@ export interface FileRoutesByTo {
   '/admin/pedidos': typeof AdminPedidosRoute
   '/admin/reportes': typeof AdminReportesRoute
   '/pedido/$id': typeof PedidoIdRoute
+  '/personalizado/$orderId': typeof PersonalizadoOrderIdRoute
   '/regalo/$id': typeof RegaloIdRoute
   '/reparto/$id': typeof RepartoIdRoute
   '/admin': typeof AdminIndexRoute
@@ -165,7 +173,7 @@ export interface FileRoutesById {
   '/cocina': typeof CocinaRoute
   '/eventos': typeof EventosRoute
   '/mostrador': typeof MostradorRoute
-  '/personalizados': typeof PersonalizadosRoute
+  '/personalizado': typeof PersonalizadoRouteWithChildren
   '/rastreo': typeof RastreoRoute
   '/regalos': typeof RegalosRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/admin/pedidos': typeof AdminPedidosRoute
   '/admin/reportes': typeof AdminReportesRoute
   '/pedido/$id': typeof PedidoIdRoute
+  '/personalizado/$orderId': typeof PersonalizadoOrderIdRoute
   '/regalo/$id': typeof RegaloIdRoute
   '/reparto/$id': typeof RepartoIdRoute
   '/admin/': typeof AdminIndexRoute
@@ -187,7 +196,7 @@ export interface FileRouteTypes {
     | '/cocina'
     | '/eventos'
     | '/mostrador'
-    | '/personalizados'
+    | '/personalizado'
     | '/rastreo'
     | '/regalos'
     | '/admin/clientes'
@@ -197,6 +206,7 @@ export interface FileRouteTypes {
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/pedido/$id'
+    | '/personalizado/$orderId'
     | '/regalo/$id'
     | '/reparto/$id'
     | '/admin/'
@@ -206,7 +216,7 @@ export interface FileRouteTypes {
     | '/cocina'
     | '/eventos'
     | '/mostrador'
-    | '/personalizados'
+    | '/personalizado'
     | '/rastreo'
     | '/regalos'
     | '/admin/clientes'
@@ -216,6 +226,7 @@ export interface FileRouteTypes {
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/pedido/$id'
+    | '/personalizado/$orderId'
     | '/regalo/$id'
     | '/reparto/$id'
     | '/admin'
@@ -226,7 +237,7 @@ export interface FileRouteTypes {
     | '/cocina'
     | '/eventos'
     | '/mostrador'
-    | '/personalizados'
+    | '/personalizado'
     | '/rastreo'
     | '/regalos'
     | '/admin/clientes'
@@ -236,6 +247,7 @@ export interface FileRouteTypes {
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/pedido/$id'
+    | '/personalizado/$orderId'
     | '/regalo/$id'
     | '/reparto/$id'
     | '/admin/'
@@ -247,7 +259,7 @@ export interface RootRouteChildren {
   CocinaRoute: typeof CocinaRoute
   EventosRoute: typeof EventosRoute
   MostradorRoute: typeof MostradorRoute
-  PersonalizadosRoute: typeof PersonalizadosRoute
+  PersonalizadoRoute: typeof PersonalizadoRouteWithChildren
   RastreoRoute: typeof RastreoRoute
   RegalosRoute: typeof RegalosRoute
   PedidoIdRoute: typeof PedidoIdRoute
@@ -271,11 +283,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RastreoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/personalizados': {
-      id: '/personalizados'
-      path: '/personalizados'
-      fullPath: '/personalizados'
-      preLoaderRoute: typeof PersonalizadosRouteImport
+    '/personalizado': {
+      id: '/personalizado'
+      path: '/personalizado'
+      fullPath: '/personalizado'
+      preLoaderRoute: typeof PersonalizadoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mostrador': {
@@ -333,6 +345,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/regalo/$id'
       preLoaderRoute: typeof RegaloIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/personalizado/$orderId': {
+      id: '/personalizado/$orderId'
+      path: '/$orderId'
+      fullPath: '/personalizado/$orderId'
+      preLoaderRoute: typeof PersonalizadoOrderIdRouteImport
+      parentRoute: typeof PersonalizadoRoute
     }
     '/pedido/$id': {
       id: '/pedido/$id'
@@ -408,13 +427,25 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface PersonalizadoRouteChildren {
+  PersonalizadoOrderIdRoute: typeof PersonalizadoOrderIdRoute
+}
+
+const PersonalizadoRouteChildren: PersonalizadoRouteChildren = {
+  PersonalizadoOrderIdRoute: PersonalizadoOrderIdRoute,
+}
+
+const PersonalizadoRouteWithChildren = PersonalizadoRoute._addFileChildren(
+  PersonalizadoRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   CocinaRoute: CocinaRoute,
   EventosRoute: EventosRoute,
   MostradorRoute: MostradorRoute,
-  PersonalizadosRoute: PersonalizadosRoute,
+  PersonalizadoRoute: PersonalizadoRouteWithChildren,
   RastreoRoute: RastreoRoute,
   RegalosRoute: RegalosRoute,
   PedidoIdRoute: PedidoIdRoute,

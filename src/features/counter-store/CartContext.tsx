@@ -21,10 +21,9 @@ export interface GiftDetails {
   recipientLocation: string;
   recipientLat?: number;
   recipientLng?: number;
-  // --- NUEVO: Anexamos estos campos para la tarjeta visual sin borrar nada ---
   cardId?: string; 
   cardImage?: string;
-  // --------------------------------------------------------------------------
+  dedicatoria: string; // Campo añadido para corregir el error
 }
 
 interface CartCtx {

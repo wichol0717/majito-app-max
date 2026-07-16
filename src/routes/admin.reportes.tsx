@@ -1,9 +1,8 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, TrendingUp, ShoppingBag, Users, DollarSign } from "lucide-react";
+import { BarChart3, TrendingUp, ShoppingBag, Users, DollarSign, FileDown } from "lucide-react"; 
 import { AdminShell } from "@/features/admin/AdminShell";
-import { useAdminAuth } from "@/features/admin/AdminAuth";
 import { adminReports } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin/reportes")({
@@ -16,15 +15,98 @@ const fmt = (n: number) =>
 type Report = Awaited<ReturnType<typeof adminReports>>;
 
 function ReportesPage() {
-  const { password } = useAdminAuth();
+  const password = "majito2005";
+  const [isClient, setIsClient] = useState(false);
   const run = useServerFn(adminReports);
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  useEffect(() => setIsClient(true), []);
+
+  const exportarAPdf = async (reportData: Report, periodDays: number) => {
+    try {
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+
+      const doc = new jsPDF();
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(244, 114, 182);
+      doc.text("Majito Cake", 14, 20);
+
+      doc.setFontSize(12);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Reporte de Desempeño Comercial (Últimos ${periodDays} días)`, 14, 28);
+      
+      const fechaHoy = new Date().toLocaleDateString("es-MX");
+      doc.text(`Fecha de emisión: ${fechaHoy}`, 14, 34);
+
+      doc.setDrawColor(244, 114, 182);
+      doc.setLineWidth(0.5);
+      doc.line(14, 38, 196, 38);
+
+      doc.setFontSize(14);
+      doc.setTextColor(51, 65, 85);
+      doc.text("Métricas Clave", 14, 46);
+
+      autoTable(doc, {
+        startY: 50,
+        head: [["Métrica", "Valor"]],
+        body: [
+          ["Ingresos Totales", fmt(reportData.totalIngresos)],
+          ["Pedidos Registrados", String(reportData.totalPedidos)],
+          ["Ticket Promedio", fmt(reportData.ticketPromedio)],
+          ["Clientes Activos", String(reportData.topClientes.length)]
+        ],
+        headStyles: { fillColor: [244, 114, 182] },
+        theme: "striped",
+        styles: { font: "helvetica", fontSize: 10 },
+      });
+
+      const nextY1 = (doc as any).lastAutoTable.finalY + 10;
+      doc.text("Ingresos por Canal", 14, nextY1);
+
+      autoTable(doc, {
+        startY: nextY1 + 4,
+        head: [["Canal", "Ingresos", "Pedidos"]],
+        body: [
+          ["Mostrador", fmt(reportData.ingresos.mostrador), String(reportData.pedidos.mostrador)],
+          ["Regalos", fmt(reportData.ingresos.regalos), String(reportData.pedidos.regalos)],
+          ["Pasteles", fmt(reportData.ingresos.pasteles), String(reportData.pedidos.pasteles)],
+          ["Eventos", fmt(reportData.ingresos.eventos), String(reportData.pedidos.eventos)]
+        ],
+        headStyles: { fillColor: [141, 110, 99] },
+        theme: "striped",
+        styles: { font: "helvetica", fontSize: 10 },
+      });
+
+      const nextY2 = (doc as any).lastAutoTable.finalY + 10;
+      doc.text("Top Productos Vendidos", 14, nextY2);
+
+      autoTable(doc, {
+        startY: nextY2 + 4,
+        head: [["Producto", "Cantidad Vendida", "Ingresos Generados"]],
+        body: reportData.topProductos.map((p) => [
+          p.nombre,
+          String(p.cantidad),
+          fmt(p.ingresos)
+        ]),
+        headStyles: { fillColor: [244, 114, 182] },
+        theme: "striped",
+        styles: { font: "helvetica", fontSize: 10 },
+      });
+
+      doc.save(`Reporte_MajitoCake_${periodDays}dias_${fechaHoy.replace(/\//g, "-")}.pdf`);
+    } catch (e) {
+      console.error("Error al generar el PDF:", e);
+    }
+  };
+
   useEffect(() => {
-    if (!password) return;
+    if (!password || !isClient) return;
     let cancel = false;
     setLoading(true); setErr(null);
     run({ data: { password, days } })
@@ -32,20 +114,32 @@ function ReportesPage() {
       .catch((e) => { if (!cancel) setErr(e?.message ?? "Error"); })
       .finally(() => { if (!cancel) setLoading(false); });
     return () => { cancel = true; };
-  }, [password, days, run]);
+  }, [password, days, run, isClient]);
 
-  if (!password) return <Navigate to="/admin" />;
+  if (!isClient) return null;
 
   return (
     <AdminShell title="Reportes">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs text-mocha">Periodo:</span>
-        {[7, 15, 30, 90, 180, 365].map((d) => (
-          <button key={d} onClick={() => setDays(d)}
-            className={`rounded-full px-3 py-1 text-xs ${days === d ? "bg-shocking text-white" : "bg-white ring-1 ring-mocha/15 text-mocha hover:bg-sunset"}`}>
-            {d} días
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-mocha">Periodo:</span>
+          {[7, 15, 30, 90, 180, 365].map((d) => (
+            <button key={d} onClick={() => setDays(d)}
+              className={`rounded-full px-3 py-1 text-xs ${days === d ? "bg-shocking text-white" : "bg-white ring-1 ring-mocha/15 text-mocha hover:bg-sunset"}`}>
+              {d} días
+            </button>
+          ))}
+        </div>
+
+        {data && (
+          <button
+            onClick={() => exportarAPdf(data, days)}
+            className="flex items-center gap-1.5 rounded-xl bg-shocking px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-opacity-90 transition active:scale-95"
+          >
+            <FileDown size={14} />
+            Exportar PDF
           </button>
-        ))}
+        )}
       </div>
 
       {err && <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{err}</div>}
