@@ -1,10 +1,10 @@
-// [Módulo: routes] -> [Archivo: personalizados.tsx] -> [Acción: CREAR]
 import { createFileRoute } from "@tanstack/react-router";
-import { PuertaShell } from "@/components/PuertaShell";
-import { CustomCakeForm } from "@/features/custom-cakes/CustomCakeForm";
+// IMPORTANTE: Usa rutas relativas (../) en lugar de @/ para evitar el error 2307
+import { PuertaShell } from "../components/PuertaShell";
+import { CustomCakeForm } from "../features/custom-cakes/CustomCakeForm";
 
 export const Route = createFileRoute("/personalizados")({
-  component: PersonalizadosPage,
+  component: PersonalizadoPage,
   head: () => ({
     meta: [
       { title: "Pastel Personalizado · Majito Cake" },
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/personalizados")({
   }),
 });
 
-function PersonalizadosPage() {
+function PersonalizadoPage() {
   return (
     <PuertaShell
       letra="B"
