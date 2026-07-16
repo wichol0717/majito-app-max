@@ -28,7 +28,7 @@ function ReportesPage() {
   const exportarAPdf = async (reportData: Report, periodDays: number) => {
     try {
       const { jsPDF } = await import("jspdf");
-      await import("jspdf-autotable");
+      const autoTable = (await import("jspdf-autotable")).default;
 
       const doc = new jsPDF();
 
@@ -52,18 +52,15 @@ function ReportesPage() {
       doc.setTextColor(51, 65, 85);
       doc.text("Métricas Clave", 14, 46);
 
-      const metricsCols = ["Métrica", "Valor"];
-      const metricsRows = [
-        ["Ingresos Totales", fmt(reportData.totalIngresos)],
-        ["Pedidos Registrados", String(reportData.totalPedidos)],
-        ["Ticket Promedio", fmt(reportData.ticketPromedio)],
-        ["Clientes Activos", String(reportData.topClientes.length)]
-      ];
-
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 50,
-        head: [metricsCols],
-        body: metricsRows,
+        head: [["Métrica", "Valor"]],
+        body: [
+          ["Ingresos Totales", fmt(reportData.totalIngresos)],
+          ["Pedidos Registrados", String(reportData.totalPedidos)],
+          ["Ticket Promedio", fmt(reportData.ticketPromedio)],
+          ["Clientes Activos", String(reportData.topClientes.length)]
+        ],
         headStyles: { fillColor: [244, 114, 182] },
         theme: "striped",
         styles: { font: "helvetica", fontSize: 10 },
@@ -72,18 +69,15 @@ function ReportesPage() {
       const nextY1 = (doc as any).lastAutoTable.finalY + 10;
       doc.text("Ingresos por Canal", 14, nextY1);
 
-      const canalCols = ["Canal", "Ingresos", "Pedidos"];
-      const canalRows = [
-        ["Mostrador", fmt(reportData.ingresos.mostrador), String(reportData.pedidos.mostrador)],
-        ["Regalos", fmt(reportData.ingresos.regalos), String(reportData.pedidos.regalos)],
-        ["Pasteles", fmt(reportData.ingresos.pasteles), String(reportData.pedidos.pasteles)],
-        ["Eventos", fmt(reportData.ingresos.eventos), String(reportData.pedidos.eventos)]
-      ];
-
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: nextY1 + 4,
-        head: [canalCols],
-        body: canalRows,
+        head: [["Canal", "Ingresos", "Pedidos"]],
+        body: [
+          ["Mostrador", fmt(reportData.ingresos.mostrador), String(reportData.pedidos.mostrador)],
+          ["Regalos", fmt(reportData.ingresos.regalos), String(reportData.pedidos.regalos)],
+          ["Pasteles", fmt(reportData.ingresos.pasteles), String(reportData.pedidos.pasteles)],
+          ["Eventos", fmt(reportData.ingresos.eventos), String(reportData.pedidos.eventos)]
+        ],
         headStyles: { fillColor: [141, 110, 99] },
         theme: "striped",
         styles: { font: "helvetica", fontSize: 10 },
@@ -92,17 +86,14 @@ function ReportesPage() {
       const nextY2 = (doc as any).lastAutoTable.finalY + 10;
       doc.text("Top Productos Vendidos", 14, nextY2);
 
-      const prodCols = ["Producto", "Cantidad Vendida", "Ingresos Generados"];
-      const prodRows = reportData.topProductos.map((p) => [
-        p.nombre,
-        String(p.cantidad),
-        fmt(p.ingresos)
-      ]);
-
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: nextY2 + 4,
-        head: [prodCols],
-        body: prodRows,
+        head: [["Producto", "Cantidad Vendida", "Ingresos Generados"]],
+        body: reportData.topProductos.map((p) => [
+          p.nombre,
+          String(p.cantidad),
+          fmt(p.ingresos)
+        ]),
         headStyles: { fillColor: [244, 114, 182] },
         theme: "striped",
         styles: { font: "helvetica", fontSize: 10 },
