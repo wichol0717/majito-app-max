@@ -117,8 +117,8 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       componentRestrictions: { country: "mx" },
     });
     
-    // Configurar campos requeridos
-    ac.requestedDataFields = ["formattedAddress", "geometry"];
+    // Configurar campos requeridos (CORREGIDO: era requestedDataFields)
+    ac.requestedFields = ["formattedAddress", "geometry"];
     autocompleteContainerRef.current.appendChild(ac);
 
     ac.addEventListener("gmp-placeselect", (event: any) => {
