@@ -37,9 +37,9 @@ export function CartPanel() {
   const memoizedAddress = useMemo(() => direccion, [direccion]);
 
   const handleAddressChange = useCallback((val: any) => {
-    setDireccion(val);
-  }, [setDireccion]);
-  const [buyerName, setBuyerName] = useState("");
+  console.log("🚀 [DEBUG] El padre recibió la dirección:", val); // <--- AÑADE ESTO
+  setDireccion(val);
+}, [setDireccion]);const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
 
   const [metodo, setMetodo] = useState<"efectivo" | "spei">("efectivo");
