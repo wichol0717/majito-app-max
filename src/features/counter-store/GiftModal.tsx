@@ -44,24 +44,26 @@ export function GiftModal({ product, onClose }: Props) {
   const [recipientWhatsapp, setRecipientWhatsapp] = useState("");
   const [recipientAddress, setRecipientAddress] = useState<AddressValue | null>(null);
 
-  // Debug: Ver por qué falla la validación
+  // Validación robusta
   const formValido =
     buyerName.trim().length >= 2 &&
     buyerWhatsapp.trim().length >= 8 &&
     recipientName.trim().length >= 2 &&
     recipientWhatsapp.trim().length >= 8 &&
     recipientAddress !== null &&
-    recipientAddress.direccion_texto.trim().length >= 3 &&
+    recipientAddress.direccion_texto.trim().length > 0 &&
     mensaje.trim().length > 0;
 
+  // Log de diagnóstico: Abre la consola (F12) para ver qué campo está faltando si el botón sigue deshabilitado
   useEffect(() => {
     if (!formValido) {
-      console.log("Validación pendiente:", {
+      console.log("Estado de validación:", {
         buyerName: buyerName.trim().length >= 2,
         buyerWhatsapp: buyerWhatsapp.trim().length >= 8,
         recipientName: recipientName.trim().length >= 2,
         recipientWhatsapp: recipientWhatsapp.trim().length >= 8,
-        address: recipientAddress !== null && (recipientAddress?.direccion_texto?.length ?? 0) >= 3,
+        hasAddress: recipientAddress !== null,
+        addressText: recipientAddress?.direccion_texto,
         mensaje: mensaje.trim().length > 0
       });
     }
