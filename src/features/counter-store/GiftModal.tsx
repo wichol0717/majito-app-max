@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,7 +35,7 @@ export function GiftModal({ product, onClose }: Props) {
   const ENVIO_COSTO = Number(settings.shipping_cost) || 0;
   
   const [qty, setQty] = useState(1);
-  const [mensaje, setMensaje] = useState(""); // Ahora es el mensaje personalizado libre
+  const [mensaje, setMensaje] = useState(""); 
   const [selectedCard, setSelectedCard] = useState(TARJETAS[0]);
 
   const [buyerName, setBuyerName] = useState("");
@@ -44,21 +44,35 @@ export function GiftModal({ product, onClose }: Props) {
   const [recipientWhatsapp, setRecipientWhatsapp] = useState("");
   const [recipientAddress, setRecipientAddress] = useState<AddressValue | null>(null);
 
+  // Debug: Ver por qué falla la validación
+  const formValido =
+    buyerName.trim().length >= 2 &&
+    buyerWhatsapp.trim().length >= 8 &&
+    recipientName.trim().length >= 2 &&
+    recipientWhatsapp.trim().length >= 8 &&
+    recipientAddress !== null &&
+    recipientAddress.direccion_texto.trim().length >= 3 &&
+    mensaje.trim().length > 0;
+
+  useEffect(() => {
+    if (!formValido) {
+      console.log("Validación pendiente:", {
+        buyerName: buyerName.trim().length >= 2,
+        buyerWhatsapp: buyerWhatsapp.trim().length >= 8,
+        recipientName: recipientName.trim().length >= 2,
+        recipientWhatsapp: recipientWhatsapp.trim().length >= 8,
+        address: recipientAddress !== null && (recipientAddress?.direccion_texto?.length ?? 0) >= 3,
+        mensaje: mensaje.trim().length > 0
+      });
+    }
+  }, [buyerName, buyerWhatsapp, recipientName, recipientWhatsapp, recipientAddress, mensaje, formValido]);
+
   if (!product) return null;
 
   const enCarrito = quantityOf(product.id);
   const disponible = Math.max(0, product.stock - enCarrito);
   const canPlus = qty < disponible;
   const canMinus = qty > 1;
-
-  const formValido =
-    buyerName.trim().length >= 2 &&
-    buyerWhatsapp.trim().length >= 8 &&
-    recipientName.trim().length >= 2 &&
-    recipientWhatsapp.trim().length >= 8 &&
-    !!recipientAddress &&
-    recipientAddress.direccion_texto.length >= 5 &&
-    mensaje.trim().length > 0;
 
   const confirmar = () => {
     if (!formValido || !recipientAddress) return;
@@ -70,7 +84,6 @@ export function GiftModal({ product, onClose }: Props) {
       recipientLocation: recipientAddress.direccion_texto,
       recipientLat: recipientAddress.latitud,
       recipientLng: recipientAddress.longitud,
-      // Se anexa la información visual y la dedicatoria completa
       cardId: selectedCard.id,
       cardImage: selectedCard.img,
       dedicatoria: mensaje.trim(), 
@@ -97,7 +110,11 @@ export function GiftModal({ product, onClose }: Props) {
 
         <div className="flex gap-4">
           {product.img ? (
-            <img src={product.img} alt={product.nombre} className="h-32 w-32 rounded-xl object-cover" />
+            <img 
+              src={product.img} 
+              alt={product.nombre ?? "Imagen de producto"} 
+              className="h-32 w-32 rounded-xl object-cover" 
+            />
           ) : (
             <div className="flex h-32 w-32 items-center justify-center rounded-xl bg-sunset text-4xl">🎁</div>
           )}
