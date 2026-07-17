@@ -121,6 +121,15 @@ export function CartPanel() {
     console.log("4. Comprobante URL existe:", !!comprobanteUrl);
     console.log("--- ¿BOTÓN HABILITADO?:", puedeConfirmarSpei, "---");
   }, [puedeConfirmarWhats, buyerName, buyerWhatsapp, comprobanteUrl, puedeConfirmarSpei]);
+  // --- DIAGNÓSTICO PROFUNDO DE DIRECCIÓN Y ENTREGA ---
+  useEffect(() => {
+    console.log("--- DEBUG DE DIRECCIÓN Y ENTREGA ---");
+    console.log("1. Items en carrito:", items.length);
+    console.log("2. Tipo de entrega:", entrega);
+    console.log("3. ¿Hay productos que requieren dirección (hayMostrador)?:", items.some((i) => !i.isGift));
+    console.log("4. ¿Dirección válida (direccionOk)?:", direccionOk);
+    console.log("-------------------------------------");
+  }, [items, entrega, direccionOk]);
   const mensajeWhats = useMemo(() => {
     const lineas: string[] = ["*Nuevo pedido — Majito Cake*", ""];
     if (metodo === "spei") lineas.push(`Referencia: *${referencia}*`, "");
