@@ -555,12 +555,15 @@ useEffect(() => {
         </div>
         {entrega === "envio" && (
           <div className="mt-3">
-            <AddressPicker
-              value={direccion}
-              onChange={setDireccion}
-              label="Dirección exacta *"
-              placeholder="Busca tu calle, colonia o referencia"
-            />
+           <AddressPicker
+  value={direccion}
+  onChange={(val) => {
+    console.log("¡DEBUG: Datos recibidos del mapa!", val);
+    setDireccion(val);
+  }}
+  label="Dirección exacta *"
+  placeholder="Busca tu calle, colonia o referencia"
+/>
           </div>
         )}
       </div>
