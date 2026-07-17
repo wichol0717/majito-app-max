@@ -78,8 +78,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     return () => { cancelled = true; };
   }, []);
 
-  // --- LO NUEVO: Sincronización robusta ---
-  // Este useEffect asegura que si el valor externo cambia, el mapa se mueva
+  // --- Sincronización robusta ---
   useEffect(() => {
     if (ready && mapRef.current && markerRef.current && value) {
       const pos = { lat: value.latitud, lng: value.longitud };
@@ -88,7 +87,6 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       mapRef.current.setZoom(17);
     }
   }, [value, ready]);
-  // ----------------------------------------
 
   useEffect(() => {
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
@@ -111,7 +109,10 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     markerRef.current = marker;
 
     const geocoder = new g.maps.Geocoder();
+    
+    // --- EVENTO MARCADOR ---
     marker.addListener("dragend", () => {
+      console.log("¡DEBUG: El marcador se movió!");
       const p = marker.getPosition();
       const lat = p.lat();
       const lng = p.lng();
@@ -119,21 +120,24 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        
+        console.log("¡DEBUG: Enviando datos desde marcador:", { direccion_texto: txt, latitud: lat, longitud: lng });
         onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
     });
 
     // Nueva API: PlaceAutocompleteElement
-    autocompleteContainerRef.current.innerHTML = ""; // Limpiar previo
+    autocompleteContainerRef.current.innerHTML = "";
     const ac = new g.maps.places.PlaceAutocompleteElement({
       componentRestrictions: { country: "mx" },
     });
     
-    // Configurar campos requeridos
     ac.requestedDataFields = ["formattedAddress", "geometry"];
     autocompleteContainerRef.current.appendChild(ac);
 
+    // --- EVENTO BUSQUEDA ---
     ac.addEventListener("gmp-placeselect", (event: any) => {
+      console.log("¡DEBUG: Se seleccionó una dirección!");
       const place = event.place;
       if (!place || !place.location) return;
       
@@ -141,6 +145,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       const lng = place.location.lng();
       const txt = place.formattedAddress || "";
       
+      console.log("¡DEBUG: Enviando datos desde búsqueda:", { direccion_texto: txt, latitud: lat, longitud: lng });
       map.setCenter({ lat, lng });
       map.setZoom(17);
       marker.setPosition({ lat, lng });
@@ -155,7 +160,6 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       <label className="block text-xs font-semibold text-foreground">{label}</label>
       <div className="relative">
         <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-10" />
-        {/* Contenedor del nuevo Autocomplete */}
         <div 
             ref={autocompleteContainerRef} 
             className="w-full [&>gmp-place-autocomplete-input]:w-full [&>gmp-place-autocomplete-input]:rounded-lg [&>gmp-place-autocomplete-input]:border [&>gmp-place-autocomplete-input]:border-mocha/20 [&>gmp-place-autocomplete-input]:py-2 [&>gmp-place-autocomplete-input]:pl-9 [&>gmp-place-autocomplete-input]:pr-3 [&>gmp-place-autocomplete-input]:text-sm [&>gmp-place-autocomplete-input]:outline-none focus-within:[&>gmp-place-autocomplete-input]:border-shocking"
