@@ -149,15 +149,16 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
       // 🔴 DEBUG DE ESCRITURA
       ac.addEventListener("input", (e: any) => {
-          console.log("⌨️ [DEBUG] Escribiendo en buscador:", e.target.inputValue);
+          console.log("⌨️ [DEBUG] Escribiendo en buscador");
       });
 
-      // 🔴 DEBUG CRÍTICO DE SELECCIÓN --- CORRECCIÓN ASÍNCRONA
-      ac.addEventListener("gmp-placeselect", async (event: any) => {
-        console.log("🚨 [DEBUG CRÍTICO] ¡Se disparó gmp-placeselect! Alguien hizo clic en una sugerencia.");
-        console.log("📦 Objeto del evento:", event);
+      // 🔴 NUEVA LOGICA: Manejador unificado para ambos eventos de selección
+      const handlePlaceSelected = async (event: any) => {
+        console.log("🚨 [DEBUG] ¡Se detectó intento de selección de lugar!");
         
-        const place = event.place;
+        // Obtenemos el objeto place tanto si es gmp-placeselect como si es placeselect
+        const place = event.place || (event.detail && event.detail.place);
+        
         if (!place) {
             console.error("❌ ERROR: El evento no trajo el objeto 'place'");
             return;
@@ -165,11 +166,10 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         
         try {
           console.log("⏳ Pidiendo datos de ubicación a Google...");
-          // Obligamos a la API a traer los detalles de la dirección antes de continuar
           await place.fetchFields({ fields: ["formattedAddress", "location"] });
           
           if (!place.location) {
-            console.error("❌ ERROR: Google no devolvió coordenadas para esta dirección");
+            console.error("❌ ERROR: Google no devolvió coordenadas");
             return;
           }
           
@@ -177,7 +177,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           const lng = place.location.lng();
           const txt = place.formattedAddress || "";
           
-          console.log("✅ [DEBUG ÉXITO] Datos extraídos listos para enviar al padre:", { txt, lat, lng });
+          console.log("✅ [DEBUG ÉXITO] Datos extraídos:", { txt, lat, lng });
           
           map.setCenter({ lat, lng });
           map.setZoom(17);
@@ -186,7 +186,12 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         } catch (fetchError) {
           console.error("❌ ERROR CRÍTICO al hacer fetchFields:", fetchError);
         }
-      });
+      };
+
+      // 🔴 ESCUCHAMOS AMBOS EVENTOS (gmp-placeselect y el fallback placeselect)
+      ac.addEventListener("gmp-placeselect", handlePlaceSelected);
+      ac.addEventListener("placeselect", handlePlaceSelected);
+
     } catch (err) {
       console.error("Error al inicializar buscador:", err);
     }
