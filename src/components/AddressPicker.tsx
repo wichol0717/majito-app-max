@@ -120,8 +120,9 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
     const geocoder = new g.maps.Geocoder();
 
-    // Evento de arrastrar marcador
+    // 🔴 DEBUG DEL ARRASTRE DEL PIN
     marker.addListener("dragend", () => {
+      console.log("📍 [DEBUG] Marcador arrastrado manualmente. Ejecutando Geocoder...");
       const p = marker.getPosition();
       if (!p) return;
       const lat = p.lat();
@@ -130,6 +131,8 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        
+        console.log("✅ [DEBUG] Geocoder terminó. Enviando al padre:", txt);
         onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
     });
@@ -144,17 +147,29 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       ac.requestedDataFields = ["formattedAddress", "geometry"];
       autocompleteContainerRef.current.appendChild(ac);
 
-      // --- AQUÍ ESTÁ LA CORRECCIÓN ASÍNCRONA ---
+      // 🔴 DEBUG DE ESCRITURA
+      ac.addEventListener("input", (e: any) => {
+          console.log("⌨️ [DEBUG] Escribiendo en buscador:", e.target.inputValue);
+      });
+
+      // 🔴 DEBUG CRÍTICO DE SELECCIÓN --- CORRECCIÓN ASÍNCRONA
       ac.addEventListener("gmp-placeselect", async (event: any) => {
+        console.log("🚨 [DEBUG CRÍTICO] ¡Se disparó gmp-placeselect! Alguien hizo clic en una sugerencia.");
+        console.log("📦 Objeto del evento:", event);
+        
         const place = event.place;
-        if (!place) return;
+        if (!place) {
+            console.error("❌ ERROR: El evento no trajo el objeto 'place'");
+            return;
+        }
         
         try {
+          console.log("⏳ Pidiendo datos de ubicación a Google...");
           // Obligamos a la API a traer los detalles de la dirección antes de continuar
           await place.fetchFields({ fields: ["formattedAddress", "location"] });
           
           if (!place.location) {
-            console.warn("⚠️ Google Places no devolvió location para este lugar.");
+            console.error("❌ ERROR: Google no devolvió coordenadas para esta dirección");
             return;
           }
           
@@ -162,14 +177,14 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           const lng = place.location.lng();
           const txt = place.formattedAddress || "";
           
-          console.log("📍 [DEBUG] API Nueva resolvió la dirección:", txt);
+          console.log("✅ [DEBUG ÉXITO] Datos extraídos listos para enviar al padre:", { txt, lat, lng });
           
           map.setCenter({ lat, lng });
           map.setZoom(17);
           marker.setPosition({ lat, lng });
           onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
         } catch (fetchError) {
-          console.error("Error pidiendo detalles de Google Places:", fetchError);
+          console.error("❌ ERROR CRÍTICO al hacer fetchFields:", fetchError);
         }
       });
     } catch (err) {
