@@ -95,6 +95,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     const g = (window as any).google;
     const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
 
+    // Inicializar Mapa
     const map = new g.maps.Map(mapDivRef.current, {
       center: initial,
       zoom: value ? 16 : 13,
@@ -102,6 +103,8 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       streetViewControl: false,
       fullscreenControl: false,
     });
+
+    // Inicializar Marcador
     const marker = new g.maps.Marker({
       position: initial,
       map,
@@ -111,52 +114,49 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     markerRef.current = marker;
 
     const geocoder = new g.maps.Geocoder();
-    
-    // --- EVENTO MARCADOR ---
+
+    // Evento de arrastrar marcador
     marker.addListener("dragend", () => {
-      console.log("¡DEBUG: El marcador se movió!");
       const p = marker.getPosition();
+      if (!p) return;
       const lat = p.lat();
       const lng = p.lng();
       geocoder.geocode({ location: { lat, lng } }, (results: any, status: string) => {
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        
-        console.log("¡DEBUG: Enviando datos desde marcador:", { direccion_texto: txt, latitud: lat, longitud: lng });
         onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
     });
 
-    // Nueva API: PlaceAutocompleteElement
+    // Inicializar Buscador
     autocompleteContainerRef.current.innerHTML = "";
-    const ac = new g.maps.places.PlaceAutocompleteElement({
-      componentRestrictions: { country: "mx" },
-    });
-    
-    ac.requestedDataFields = ["formattedAddress", "geometry"];
-    autocompleteContainerRef.current.appendChild(ac);
+    try {
+      const ac = new g.maps.places.PlaceAutocompleteElement({
+        componentRestrictions: { country: "mx" },
+      });
+      
+      ac.requestedDataFields = ["formattedAddress", "geometry"];
+      autocompleteContainerRef.current.appendChild(ac);
 
-    // --- EVENTO BUSQUEDA ---
-    ac.addEventListener("gmp-placeselect", (event: any) => {
-      console.log("¡DEBUG: Se seleccionó una dirección!");
-      const place = event.place;
-      if (!place || !place.location) return;
-      
-      const lat = place.location.lat();
-      const lng = place.location.lng();
-      const txt = place.formattedAddress || "";
-      
-      console.log("¡DEBUG: Enviando datos desde búsqueda:", { direccion_texto: txt, latitud: lat, longitud: lng });
-      map.setCenter({ lat, lng });
-      map.setZoom(17);
-      marker.setPosition({ lat, lng });
-      onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
-    });
-    
+      ac.addEventListener("gmp-placeselect", (event: any) => {
+        const place = event.place;
+        if (!place || !place.location) return;
+        
+        const lat = place.location.lat();
+        const lng = place.location.lng();
+        const txt = place.formattedAddress || "";
+        
+        map.setCenter({ lat, lng });
+        map.setZoom(17);
+        marker.setPosition({ lat, lng });
+        onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+      });
+    } catch (err) {
+      console.error("Error al inicializar buscador:", err);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
-
   return (
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-foreground">{label}</label>
