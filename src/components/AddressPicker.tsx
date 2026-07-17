@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 
 /**
- * Selector de dirección con Google Places Autocomplete + mapa arrastrable.
+ * Selector de dirección con Google Places Autocomplete (Nueva API) + mapa arrastrable.
  * Devuelve al padre: texto legible, latitud y longitud (coordenadas GPS).
- * Restringido a México, con sesgo hacia Tuxpan, Veracruz.
  */
 
 export interface AddressValue {
@@ -23,7 +22,7 @@ interface Props {
 // Tuxpan, Veracruz
 const TUXPAN = { lat: 20.9569, lng: -97.4083 };
 
-// Loader singleton (solo un <script> en toda la sesión)
+// Loader singleton
 let loaderPromise: Promise<void> | null = null;
 function loadGoogleMaps(apiKey: string): Promise<any> {
   if (typeof window === "undefined") return Promise.resolve();
@@ -53,15 +52,13 @@ async function ensureMapsLibraries() {
 }
 
 export function AddressPicker({ value, onChange, label = "Dirección de entrega *", placeholder = "Busca calle, colonia o referencia" }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const autocompleteContainerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [manualAddress, setManualAddress] = useState(value?.direccion_texto ?? "");
 
-  // Carga la API de Google Maps con la key obtenida del backend
   useEffect(() => {
     let cancelled = false;
     const browserKey =
@@ -73,34 +70,18 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
     Promise.resolve(browserKey)
       .then((key) => {
-        if (!key) throw new Error("Maps no está activo en este deploy. Escribe la dirección completa para continuar.");
+        if (!key) throw new Error("Maps no está activo.");
         return loadGoogleMaps(key);
       })
       .then(() => { if (!cancelled) setReady(true); })
-      .catch((e: any) => { if (!cancelled) setError(e?.message ?? "Maps no está activo. Escribe la dirección completa para continuar."); });
+      .catch((e: any) => { if (!cancelled) setError("Maps no está activo."); });
     return () => { cancelled = true; };
   }, []);
 
-  const handleManualChange = (text: string) => {
-    setManualAddress(text);
-    if (!ready && text.trim().length >= 5) {
-      onChange({
-        direccion_texto: text.trim(),
-        latitud: value?.latitud ?? TUXPAN.lat,
-        longitud: value?.longitud ?? TUXPAN.lng,
-      });
-    } else if (!ready) {
-      onChange(null);
-    }
-  };
-
-  // Inicializa autocomplete + mapa cuando la API está lista
   useEffect(() => {
-    if (!ready || !inputRef.current || !mapDivRef.current) return;
+    if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
     const g = (window as any).google;
-    const initial = value
-      ? { lat: value.latitud, lng: value.longitud }
-      : TUXPAN;
+    const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
 
     const map = new g.maps.Map(mapDivRef.current, {
       center: initial,
@@ -117,7 +98,6 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     mapRef.current = map;
     markerRef.current = marker;
 
-    // Al arrastrar el marcador, reverse-geocode para obtener el texto
     const geocoder = new g.maps.Geocoder();
     marker.addListener("dragend", () => {
       const p = marker.getPosition();
@@ -127,50 +107,46 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        if (inputRef.current) inputRef.current.value = txt;
         onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
     });
 
-    // Autocomplete legacy (soportado universalmente y sin costos raros)
-    const ac = new g.maps.places.Autocomplete(inputRef.current, {
+    // Nueva API: PlaceAutocompleteElement
+    autocompleteContainerRef.current.innerHTML = ""; // Limpiar previo
+    const ac = new g.maps.places.PlaceAutocompleteElement({
       componentRestrictions: { country: "mx" },
-      fields: ["formatted_address", "geometry", "name"],
-      bounds: new g.maps.LatLngBounds(
-        new g.maps.LatLng(TUXPAN.lat - 0.25, TUXPAN.lng - 0.25),
-        new g.maps.LatLng(TUXPAN.lat + 0.25, TUXPAN.lng + 0.25),
-      ),
-      strictBounds: false,
     });
-    ac.addListener("place_changed", () => {
-      const place = ac.getPlace();
-      if (!place?.geometry?.location) return;
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
-      const txt = place.formatted_address || place.name || "";
+    
+    // Configurar campos requeridos
+    ac.requestedDataFields = ["formattedAddress", "geometry"];
+    autocompleteContainerRef.current.appendChild(ac);
+
+    ac.addEventListener("gmp-placeselect", (event: any) => {
+      const place = event.place;
+      if (!place || !place.location) return;
+      
+      const lat = place.location.lat();
+      const lng = place.location.lng();
+      const txt = place.formattedAddress || "";
+      
       map.setCenter({ lat, lng });
       map.setZoom(17);
       marker.setPosition({ lat, lng });
-      if (inputRef.current) inputRef.current.value = txt;
       onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   return (
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-foreground">{label}</label>
       <div className="relative">
-        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={ready ? undefined : manualAddress}
-          defaultValue={ready ? (value?.direccion_texto ?? "") : undefined}
-          placeholder={placeholder}
-          className="w-full rounded-lg border border-mocha/20 py-2 pl-9 pr-3 text-sm outline-none focus:border-shocking"
-          onFocus={(e) => e.target.select()}
-          onChange={(e) => handleManualChange(e.target.value)}
+        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-10" />
+        {/* Contenedor del nuevo Autocomplete */}
+        <div 
+            ref={autocompleteContainerRef} 
+            className="w-full [&>gmp-place-autocomplete-input]:w-full [&>gmp-place-autocomplete-input]:rounded-lg [&>gmp-place-autocomplete-input]:border [&>gmp-place-autocomplete-input]:border-mocha/20 [&>gmp-place-autocomplete-input]:py-2 [&>gmp-place-autocomplete-input]:pl-9 [&>gmp-place-autocomplete-input]:pr-3 [&>gmp-place-autocomplete-input]:text-sm [&>gmp-place-autocomplete-input]:outline-none focus-within:[&>gmp-place-autocomplete-input]:border-shocking"
         />
       </div>
       <div className="relative">
@@ -181,25 +157,17 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         />
         {error && !ready && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-mocha/20 bg-crema px-4 text-center text-xs font-semibold text-mocha">
-            Escribe la dirección completa en el campo de arriba.
+            Escribe la dirección completa.
           </div>
         )}
       </div>
-      {!ready && !error && (
-        <p className="text-[11px] text-mocha">Cargando mapa…</p>
-      )}
-      {error && (
-        <p className="text-[11px] text-shocking">{error}</p>
-      )}
+      {!ready && !error && <p className="text-[11px] text-mocha">Cargando mapa…</p>}
+      {error && <p className="text-[11px] text-shocking">{error}</p>}
       {value && (
         <p className="rounded bg-crema px-2 py-1 text-[11px] text-mocha">
           📍 {value.direccion_texto}
-          <span className="ml-2 text-[10px] opacity-70">({value.latitud.toFixed(5)}, {value.longitud.toFixed(5)})</span>
         </p>
       )}
-      <p className="text-[10px] text-mocha/70">
-        {ready ? "Arrastra el marcador rojo para afinar el punto exacto." : "Con Maps inactivo, confirma la dirección por WhatsApp."}
-      </p>
     </div>
   );
 }
