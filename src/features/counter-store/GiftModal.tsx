@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { useCart, type Product } from "./CartContext";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { AddressPicker, type AddressValue } from "@/components/AddressPicker";
 
-// Sugerencias rápidas
 const SUGERENCIAS = [
   "Feliz Cumpleaños",
   "Feliz Aniversario",
@@ -44,7 +43,6 @@ export function GiftModal({ product, onClose }: Props) {
   const [recipientWhatsapp, setRecipientWhatsapp] = useState("");
   const [recipientAddress, setRecipientAddress] = useState<AddressValue | null>(null);
 
-  // Validación robusta
   const formValido =
     buyerName.trim().length >= 2 &&
     buyerWhatsapp.trim().length >= 8 &&
@@ -54,21 +52,6 @@ export function GiftModal({ product, onClose }: Props) {
     recipientAddress.direccion_texto.trim().length > 0 &&
     mensaje.trim().length > 0;
 
-  // Log de diagnóstico: Abre la consola (F12) para ver qué campo está faltando si el botón sigue deshabilitado
-  useEffect(() => {
-    if (!formValido) {
-      console.log("Estado de validación:", {
-        buyerName: buyerName.trim().length >= 2,
-        buyerWhatsapp: buyerWhatsapp.trim().length >= 8,
-        recipientName: recipientName.trim().length >= 2,
-        recipientWhatsapp: recipientWhatsapp.trim().length >= 8,
-        hasAddress: recipientAddress !== null,
-        addressText: recipientAddress?.direccion_texto,
-        mensaje: mensaje.trim().length > 0
-      });
-    }
-  }, [buyerName, buyerWhatsapp, recipientName, recipientWhatsapp, recipientAddress, mensaje, formValido]);
-
   if (!product) return null;
 
   const enCarrito = quantityOf(product.id);
@@ -77,7 +60,8 @@ export function GiftModal({ product, onClose }: Props) {
   const canMinus = qty > 1;
 
   const confirmar = () => {
-    if (!formValido || !recipientAddress) return;
+    if (!recipientAddress) return;
+    
     addGift(product, qty, mensaje, {
       buyerName: buyerName.trim(),
       buyerWhatsapp: buyerWhatsapp.trim(),
@@ -90,7 +74,7 @@ export function GiftModal({ product, onClose }: Props) {
       cardImage: selectedCard.img,
       dedicatoria: mensaje.trim(), 
     });
-    // Limpiar estado
+    
     setQty(1);
     setMensaje("");
     setBuyerName("");
@@ -136,7 +120,6 @@ export function GiftModal({ product, onClose }: Props) {
           </div>
         </div>
 
-        {/* Tarjeta Visual */}
         <div>
           <label className="mb-2 block text-sm font-semibold text-foreground">Diseño de la tarjeta digital</label>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
@@ -163,7 +146,6 @@ export function GiftModal({ product, onClose }: Props) {
           </div>
         </div>
 
-        {/* Mensaje Personalizado */}
         <div>
           <Label htmlFor="mensaje" className="mb-2 block text-sm font-semibold text-foreground">Mensaje de regalo (Dedicatoria)</Label>
           <div className="mb-2 flex flex-wrap gap-2">
@@ -226,7 +208,7 @@ export function GiftModal({ product, onClose }: Props) {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={confirmar} disabled={disponible === 0 || !formValido}>
+          <Button onClick={confirmar} disabled={false}>
             <Gift className="mr-1 h-4 w-4" /> Agregar al carrito
           </Button>
         </DialogFooter>
