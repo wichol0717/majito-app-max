@@ -94,13 +94,11 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
     
-    // Log movido aquí: solo se imprimirá cuando el mapa realmente se cree
     console.log("--- DEBUG: AddressPicker inicializando mapa exitosamente ---");
 
     const g = (window as any).google;
     const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
 
-    // Inicializar Mapa
     const map = new g.maps.Map(mapDivRef.current, {
       center: initial,
       zoom: value ? 16 : 13,
@@ -109,7 +107,6 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       fullscreenControl: false,
     });
 
-    // Inicializar Marcador
     const marker = new g.maps.Marker({
       position: initial,
       map,
@@ -120,9 +117,8 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
     const geocoder = new g.maps.Geocoder();
 
-    // 🔴 DEBUG DEL ARRASTRE DEL PIN
     marker.addListener("dragend", () => {
-      console.log("📍 [DEBUG] Marcador arrastrado manualmente. Ejecutando Geocoder...");
+      console.log("📍 [DEBUG] Marcador arrastrado manualmente...");
       const p = marker.getPosition();
       if (!p) return;
       const lat = p.lat();
@@ -131,13 +127,11 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        
-        console.log("✅ [DEBUG] Geocoder terminó. Enviando al padre:", txt);
         onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
     });
 
-    // Inicializar Buscador con retraso y espía
+    // Inicializar Buscador
     setTimeout(() => {
       autocompleteContainerRef.current!.innerHTML = "";
       try {
@@ -148,58 +142,46 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         ac.requestedDataFields = ["formattedAddress", "geometry"];
         autocompleteContainerRef.current!.appendChild(ac);
 
-        // 🔴 ESPÍA: Registrar CUALQUIER evento que el componente lance
-        const eventsToLog = ['gmp-placeselect', 'placeselect', 'change', 'input', 'select', 'placechange'];
-        eventsToLog.forEach(evtName => {
-            ac.addEventListener(evtName, (e: any) => {
-                console.log(`🔍 [EVENTO DETECTADO] "${evtName}" fue disparado.`);
-            });
-        });
-
-        // 🔴 NUEVA LOGICA: Manejador unificado para ambos eventos de selección
-        const handlePlaceSelected = async (event: any) => {
-          console.log("🚨 [DEBUG] ¡Se detectó intento de selección de lugar!");
+        // Función unificada para procesar el lugar
+        const processPlace = async (place: any) => {
+          if (!place) return;
+          console.log("⏳ Procesando lugar seleccionado...");
           
-          // Obtenemos el objeto place tanto si es gmp-placeselect como si es placeselect
-          const place = event.place || (event.detail && event.detail.place);
+          await place.fetchFields({ fields: ["formattedAddress", "location"] });
+          if (!place.location) return;
           
-          if (!place) {
-              console.error("❌ ERROR: El evento no trajo el objeto 'place'");
-              return;
-          }
+          const lat = place.location.lat();
+          const lng = place.location.lng();
+          const txt = place.formattedAddress || "";
           
-          try {
-            console.log("⏳ Pidiendo datos de ubicación a Google...");
-            await place.fetchFields({ fields: ["formattedAddress", "location"] });
-            
-            if (!place.location) {
-              console.error("❌ ERROR: Google no devolvió coordenadas");
-              return;
-            }
-            
-            const lat = place.location.lat();
-            const lng = place.location.lng();
-            const txt = place.formattedAddress || "";
-            
-            console.log("✅ [DEBUG ÉXITO] Datos extraídos:", { txt, lat, lng });
-            
-            map.setCenter({ lat, lng });
-            map.setZoom(17);
-            marker.setPosition({ lat, lng });
-            onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
-          } catch (fetchError) {
-            console.error("❌ ERROR CRÍTICO al hacer fetchFields:", fetchError);
-          }
+          map.setCenter({ lat, lng });
+          map.setZoom(17);
+          marker.setPosition({ lat, lng });
+          onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
         };
 
-        // 🔴 ESCUCHAMOS AMBOS EVENTOS (gmp-placeselect y el fallback placeselect)
-        ac.addEventListener("gmp-placeselect", handlePlaceSelected);
-        ac.addEventListener("placeselect", handlePlaceSelected);
+        // 1. Escuchar eventos oficiales
+        ac.addEventListener("gmp-placeselect", (e: any) => {
+          processPlace(e.place || (e.detail && e.detail.place));
+        });
+
+        // 2. Escuchar 'change' (Respaldo robusto)
+        ac.addEventListener("change", () => {
+          console.log("🚨 [EVENTO] 'change' detectado");
+          processPlace(ac.place);
+        });
+
+        // 3. Respaldo directo en 'input' (Si el componente guarda el objeto .place al escribir/seleccionar)
+        ac.addEventListener("input", () => {
+          if (ac.place && ac.place.location) {
+             processPlace(ac.place);
+          }
+        });
 
       } catch (err) {
         console.error("Error al inicializar buscador:", err);
       }
-    }, 500); // Pequeño retraso para asegurar montaje
+    }, 500);
     
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
