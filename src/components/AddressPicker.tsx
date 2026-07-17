@@ -91,6 +91,9 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   }, [value, ready]);
 
   useEffect(() => {
+    // PROTECCIÓN CONTRA BUCLE INFINITO
+    if (mapRef.current) return; 
+
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
     const g = (window as any).google;
     const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
