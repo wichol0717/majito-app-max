@@ -112,6 +112,15 @@ export function CartPanel() {
     buyerWhatsapp.trim().length >= 8 &&
     !!comprobanteUrl;
 
+    // --- DIAGNÓSTICO DE BOTÓN SPEI ---
+  useEffect(() => {
+    console.log("--- ESTADO DEL BOTÓN SPEI ---");
+    console.log("1. puedeConfirmarWhats:", puedeConfirmarWhats);
+    console.log("2. Nombre (>=2):", buyerName.trim().length >= 2);
+    console.log("3. WhatsApp (>=8):", buyerWhatsapp.trim().length >= 8);
+    console.log("4. Comprobante URL existe:", !!comprobanteUrl);
+    console.log("--- ¿BOTÓN HABILITADO?:", puedeConfirmarSpei, "---");
+  }, [puedeConfirmarWhats, buyerName, buyerWhatsapp, comprobanteUrl, puedeConfirmarSpei]);
   const mensajeWhats = useMemo(() => {
     const lineas: string[] = ["*Nuevo pedido — Majito Cake*", ""];
     if (metodo === "spei") lineas.push(`Referencia: *${referencia}*`, "");
