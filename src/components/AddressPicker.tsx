@@ -59,6 +59,12 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // NUEVA LÓGICA: Sincronizar el onChange para evitar el problema de "estado estancado"
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   useEffect(() => {
     let cancelled = false;
     const browserKey =
@@ -107,17 +113,17 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+        // USAR EL REF:
+        onChangeRef.current({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
     });
 
     // Nueva API: PlaceAutocompleteElement
-    autocompleteContainerRef.current.innerHTML = ""; // Limpiar previo
+    autocompleteContainerRef.current.innerHTML = "";
     const ac = new g.maps.places.PlaceAutocompleteElement({
       componentRestrictions: { country: "mx" },
     });
     
-    // Configurar campos requeridos (CORREGIDO: era requestedDataFields)
     ac.requestedFields = ["formattedAddress", "geometry"];
     autocompleteContainerRef.current.appendChild(ac);
 
@@ -132,7 +138,8 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       map.setCenter({ lat, lng });
       map.setZoom(17);
       marker.setPosition({ lat, lng });
-      onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+      // USAR EL REF:
+      onChangeRef.current({ direccion_texto: txt, latitud: lat, longitud: lng });
     });
     
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,7 +150,6 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       <label className="block text-xs font-semibold text-foreground">{label}</label>
       <div className="relative">
         <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-10" />
-        {/* Contenedor del nuevo Autocomplete */}
         <div 
             ref={autocompleteContainerRef} 
             className="w-full [&>gmp-place-autocomplete-input]:w-full [&>gmp-place-autocomplete-input]:rounded-lg [&>gmp-place-autocomplete-input]:border [&>gmp-place-autocomplete-input]:border-mocha/20 [&>gmp-place-autocomplete-input]:py-2 [&>gmp-place-autocomplete-input]:pl-9 [&>gmp-place-autocomplete-input]:pr-3 [&>gmp-place-autocomplete-input]:text-sm [&>gmp-place-autocomplete-input]:outline-none focus-within:[&>gmp-place-autocomplete-input]:border-shocking"
