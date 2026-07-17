@@ -109,10 +109,13 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       const p = marker.getPosition();
       const lat = p.lat();
       const lng = p.lng();
+      console.log("DEBUG: Marcador movido a:", { lat, lng });
       geocoder.geocode({ location: { lat, lng } }, (results: any, status: string) => {
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        
+        console.log("DEBUG: Geocoding resultado:", txt);
         // USAR EL REF:
         onChangeRef.current({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
@@ -128,13 +131,19 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     autocompleteContainerRef.current.appendChild(ac);
 
     ac.addEventListener("gmp-placeselect", (event: any) => {
+      console.log("DEBUG: Evento de selección de lugar detectado");
       const place = event.place;
-      if (!place || !place.location) return;
+      if (!place || !place.location) {
+        console.log("DEBUG: Lugar seleccionado no válido o sin ubicación");
+        return;
+      }
       
       const lat = place.location.lat();
       const lng = place.location.lng();
       const txt = place.formattedAddress || "";
       
+      console.log("DEBUG: Lugar seleccionado:", { txt, lat, lng });
+
       map.setCenter({ lat, lng });
       map.setZoom(17);
       marker.setPosition({ lat, lng });
