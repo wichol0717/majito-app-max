@@ -52,6 +52,8 @@ async function ensureMapsLibraries() {
 }
 
 export function AddressPicker({ value, onChange, label = "Dirección de entrega *", placeholder = "Busca calle, colonia o referencia" }: Props) {
+  console.log("--- DEBUG: AddressPicker intentando inicializar ---");
+
   const autocompleteContainerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
