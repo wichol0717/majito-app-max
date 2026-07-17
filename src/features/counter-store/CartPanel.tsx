@@ -33,7 +33,12 @@ export function CartPanel() {
 
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
   const [direccion, setDireccion] = useState<AddressValue | null>(null);
+// Evita que el mapa se reinicie solo
+  const memoizedAddress = useMemo(() => direccion, [direccion]);
 
+  const handleAddressChange = useCallback((val: any) => {
+    setDireccion(val);
+  }, [setDireccion]);
   const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
 
@@ -553,19 +558,17 @@ useEffect(() => {
             <p className="text-mocha">+ ${ENVIO_COSTO}</p>
           </button>
         </div>
-        {entrega === "envio" && (
-          <div className="mt-3">
-           <AddressPicker
-  value={direccion}
-  onChange={(val) => {
-    console.log("¡DEBUG: Datos recibidos del mapa!", val);
-    setDireccion(val);
-  }}
-  label="Dirección exacta *"
-  placeholder="Busca tu calle, colonia o referencia"
-/>
-          </div>
-        )}
+  {entrega === "envio" && (
+  <div className="mt-3">
+    <AddressPicker
+      key="mapa-envio"
+      value={memoizedAddress}
+      onChange={handleAddressChange}
+      label="Dirección exacta *"
+      placeholder="Busca tu calle, colonia o referencia"
+    />
+  </div>
+)}
       </div>
 
       <div className="border-t border-mocha/10 pt-3">
