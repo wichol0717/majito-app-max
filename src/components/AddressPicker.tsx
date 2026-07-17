@@ -137,64 +137,70 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       });
     });
 
-    // Inicializar Buscador
-    autocompleteContainerRef.current.innerHTML = "";
-    try {
-      const ac = new g.maps.places.PlaceAutocompleteElement({
-        componentRestrictions: { country: "mx" },
-      });
-      
-      ac.requestedDataFields = ["formattedAddress", "geometry"];
-      autocompleteContainerRef.current.appendChild(ac);
+    // Inicializar Buscador con retraso y espía
+    setTimeout(() => {
+      autocompleteContainerRef.current!.innerHTML = "";
+      try {
+        const ac = new g.maps.places.PlaceAutocompleteElement({
+          componentRestrictions: { country: "mx" },
+        });
+        
+        ac.requestedDataFields = ["formattedAddress", "geometry"];
+        autocompleteContainerRef.current!.appendChild(ac);
 
-      // 🔴 DEBUG DE ESCRITURA
-      ac.addEventListener("input", (e: any) => {
-          console.log("⌨️ [DEBUG] Escribiendo en buscador");
-      });
+        // 🔴 ESPÍA: Registrar CUALQUIER evento que el componente lance
+        const eventsToLog = ['gmp-placeselect', 'placeselect', 'change', 'input', 'select', 'placechange'];
+        eventsToLog.forEach(evtName => {
+            ac.addEventListener(evtName, (e: any) => {
+                console.log(`🔍 [EVENTO DETECTADO] "${evtName}" fue disparado.`);
+            });
+        });
 
-      // 🔴 NUEVA LOGICA: Manejador unificado para ambos eventos de selección
-      const handlePlaceSelected = async (event: any) => {
-        console.log("🚨 [DEBUG] ¡Se detectó intento de selección de lugar!");
-        
-        // Obtenemos el objeto place tanto si es gmp-placeselect como si es placeselect
-        const place = event.place || (event.detail && event.detail.place);
-        
-        if (!place) {
-            console.error("❌ ERROR: El evento no trajo el objeto 'place'");
-            return;
-        }
-        
-        try {
-          console.log("⏳ Pidiendo datos de ubicación a Google...");
-          await place.fetchFields({ fields: ["formattedAddress", "location"] });
+        // 🔴 NUEVA LOGICA: Manejador unificado para ambos eventos de selección
+        const handlePlaceSelected = async (event: any) => {
+          console.log("🚨 [DEBUG] ¡Se detectó intento de selección de lugar!");
           
-          if (!place.location) {
-            console.error("❌ ERROR: Google no devolvió coordenadas");
-            return;
+          // Obtenemos el objeto place tanto si es gmp-placeselect como si es placeselect
+          const place = event.place || (event.detail && event.detail.place);
+          
+          if (!place) {
+              console.error("❌ ERROR: El evento no trajo el objeto 'place'");
+              return;
           }
           
-          const lat = place.location.lat();
-          const lng = place.location.lng();
-          const txt = place.formattedAddress || "";
-          
-          console.log("✅ [DEBUG ÉXITO] Datos extraídos:", { txt, lat, lng });
-          
-          map.setCenter({ lat, lng });
-          map.setZoom(17);
-          marker.setPosition({ lat, lng });
-          onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
-        } catch (fetchError) {
-          console.error("❌ ERROR CRÍTICO al hacer fetchFields:", fetchError);
-        }
-      };
+          try {
+            console.log("⏳ Pidiendo datos de ubicación a Google...");
+            await place.fetchFields({ fields: ["formattedAddress", "location"] });
+            
+            if (!place.location) {
+              console.error("❌ ERROR: Google no devolvió coordenadas");
+              return;
+            }
+            
+            const lat = place.location.lat();
+            const lng = place.location.lng();
+            const txt = place.formattedAddress || "";
+            
+            console.log("✅ [DEBUG ÉXITO] Datos extraídos:", { txt, lat, lng });
+            
+            map.setCenter({ lat, lng });
+            map.setZoom(17);
+            marker.setPosition({ lat, lng });
+            onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+          } catch (fetchError) {
+            console.error("❌ ERROR CRÍTICO al hacer fetchFields:", fetchError);
+          }
+        };
 
-      // 🔴 ESCUCHAMOS AMBOS EVENTOS (gmp-placeselect y el fallback placeselect)
-      ac.addEventListener("gmp-placeselect", handlePlaceSelected);
-      ac.addEventListener("placeselect", handlePlaceSelected);
+        // 🔴 ESCUCHAMOS AMBOS EVENTOS (gmp-placeselect y el fallback placeselect)
+        ac.addEventListener("gmp-placeselect", handlePlaceSelected);
+        ac.addEventListener("placeselect", handlePlaceSelected);
 
-    } catch (err) {
-      console.error("Error al inicializar buscador:", err);
-    }
+      } catch (err) {
+        console.error("Error al inicializar buscador:", err);
+      }
+    }, 500); // Pequeño retraso para asegurar montaje
+    
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   
