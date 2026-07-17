@@ -144,24 +144,40 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       ac.requestedDataFields = ["formattedAddress", "geometry"];
       autocompleteContainerRef.current.appendChild(ac);
 
-      ac.addEventListener("gmp-placeselect", (event: any) => {
+      // --- AQUÍ ESTÁ LA CORRECCIÓN ASÍNCRONA ---
+      ac.addEventListener("gmp-placeselect", async (event: any) => {
         const place = event.place;
-        if (!place || !place.location) return;
+        if (!place) return;
         
-        const lat = place.location.lat();
-        const lng = place.location.lng();
-        const txt = place.formattedAddress || "";
-        
-        map.setCenter({ lat, lng });
-        map.setZoom(17);
-        marker.setPosition({ lat, lng });
-        onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+        try {
+          // Obligamos a la API a traer los detalles de la dirección antes de continuar
+          await place.fetchFields({ fields: ["formattedAddress", "location"] });
+          
+          if (!place.location) {
+            console.warn("⚠️ Google Places no devolvió location para este lugar.");
+            return;
+          }
+          
+          const lat = place.location.lat();
+          const lng = place.location.lng();
+          const txt = place.formattedAddress || "";
+          
+          console.log("📍 [DEBUG] API Nueva resolvió la dirección:", txt);
+          
+          map.setCenter({ lat, lng });
+          map.setZoom(17);
+          marker.setPosition({ lat, lng });
+          onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+        } catch (fetchError) {
+          console.error("Error pidiendo detalles de Google Places:", fetchError);
+        }
       });
     } catch (err) {
       console.error("Error al inicializar buscador:", err);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
+  
   return (
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-foreground">{label}</label>
