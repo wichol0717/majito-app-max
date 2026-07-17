@@ -127,10 +127,10 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     autocompleteContainerRef.current.innerHTML = "";
     const ac = document.createElement("gmp-place-autocomplete-element");
     
-    // Configuración forzada de estilo para asegurar visibilidad
+    // Estilos directos para asegurar visibilidad
     ac.style.display = "block";
     ac.style.width = "100%";
-    ac.style.minHeight = "44px"; 
+    ac.style.minHeight = "44px";
     
     ac.setAttribute("component-restrictions", 'country:mx');
     ac.setAttribute("placeholder", placeholder);
@@ -162,14 +162,16 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   return (
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-foreground">{label}</label>
-      <div className="relative">
-        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-10" />
-        {/* Contenedor simplificado */}
+      
+      {/* Contenedor corregido: pl-9 permite ver el icono y z-20 asegura interacción */}
+      <div className="relative w-full">
+        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-20" />
         <div 
             ref={autocompleteContainerRef} 
-            className="w-full border border-mocha/20 rounded-lg overflow-hidden bg-white"
+            className="w-full border border-mocha/20 rounded-lg bg-white pl-9 min-h-[44px] flex items-center"
         />
       </div>
+
       <div className="relative">
         <div
           ref={mapDivRef}
