@@ -78,6 +78,18 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     return () => { cancelled = true; };
   }, []);
 
+  // --- LO NUEVO: Sincronización robusta ---
+  // Este useEffect asegura que si el valor externo cambia, el mapa se mueva
+  useEffect(() => {
+    if (ready && mapRef.current && markerRef.current && value) {
+      const pos = { lat: value.latitud, lng: value.longitud };
+      markerRef.current.setPosition(pos);
+      mapRef.current.setCenter(pos);
+      mapRef.current.setZoom(17);
+    }
+  }, [value, ready]);
+  // ----------------------------------------
+
   useEffect(() => {
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
     const g = (window as any).google;
