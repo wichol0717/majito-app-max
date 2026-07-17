@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,8 +49,23 @@ export function GiftModal({ product, onClose }: Props) {
     recipientName.trim().length >= 2 &&
     recipientWhatsapp.trim().length >= 8 &&
     recipientAddress !== null &&
-    recipientAddress.direccion_texto.trim().length > 0 &&
+    (recipientAddress.direccion_texto || "").trim().length > 0 &&
     mensaje.trim().length > 0;
+
+  // MODIFICACIÓN: Efecto para diagnosticar por qué no se habilita el botón
+  useEffect(() => {
+    if (!formValido) {
+      console.log("DEBUG - Formulario inválido, campos actuales:", {
+        buyerName: buyerName.trim().length >= 2,
+        buyerWhatsapp: buyerWhatsapp.trim().length >= 8,
+        recipientName: recipientName.trim().length >= 2,
+        recipientWhatsapp: recipientWhatsapp.trim().length >= 8,
+        recipientAddress: recipientAddress !== null,
+        direccionTexto: (recipientAddress?.direccion_texto || "").trim().length > 0,
+        mensaje: mensaje.trim().length > 0
+      });
+    }
+  }, [buyerName, buyerWhatsapp, recipientName, recipientWhatsapp, recipientAddress, mensaje, formValido]);
 
   if (!product) return null;
 
