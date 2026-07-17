@@ -60,7 +60,12 @@ export function GiftModal({ product, onClose }: Props) {
   const canMinus = qty > 1;
 
   const confirmar = () => {
-    if (!recipientAddress) return;
+    console.log("Confirmando regalo...", { recipientAddress, formValido });
+    
+    if (!recipientAddress) {
+      console.log("Error: No hay dirección");
+      return;
+    }
     
     addGift(product, qty, mensaje, {
       buyerName: buyerName.trim(),
