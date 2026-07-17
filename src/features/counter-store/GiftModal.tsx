@@ -207,8 +207,7 @@ export function GiftModal({ product, onClose }: Props) {
             </div>
             <div>
               <Label htmlFor="recipientWhatsapp" className="text-xs">WhatsApp del festejado *</Label>
-              <Input id="recipientWhatsapp" value={recipientWhatsapp} onChange={(e) => setRecipientWhatsapp(e.target.value)} placeholder="Ej. 7831112233" />
-            </div>
+<Input id="recipientWhatsapp" value={recipientWhatsapp} onChange={(e) => setRecipientWhatsapp(e.target.value)} />            </div>
           </div>
           <AddressPicker
             value={recipientAddress}
