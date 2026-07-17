@@ -52,18 +52,18 @@ export function GiftModal({ product, onClose }: Props) {
     (recipientAddress.direccion_texto || "").trim().length > 0 &&
     mensaje.trim().length > 0;
 
-  // MODIFICACIÓN: Efecto para diagnosticar por qué no se habilita el botón
+  // DIAGNÓSTICO MEJORADO: Imprime cada campo en una línea separada en la consola
   useEffect(() => {
     if (!formValido) {
-      console.log("DEBUG - Formulario inválido, campos actuales:", {
-        buyerName: buyerName.trim().length >= 2,
-        buyerWhatsapp: buyerWhatsapp.trim().length >= 8,
-        recipientName: recipientName.trim().length >= 2,
-        recipientWhatsapp: recipientWhatsapp.trim().length >= 8,
-        recipientAddress: recipientAddress !== null,
-        direccionTexto: (recipientAddress?.direccion_texto || "").trim().length > 0,
-        mensaje: mensaje.trim().length > 0
-      });
+      console.log("--- DIAGNÓSTICO DE FORMULARIO ---");
+      console.log("1. Nombre Comprador (>=2):", buyerName.trim().length >= 2);
+      console.log("2. WhatsApp Comprador (>=8):", buyerWhatsapp.trim().length >= 8);
+      console.log("3. Nombre Festejado (>=2):", recipientName.trim().length >= 2);
+      console.log("4. WhatsApp Festejado (>=8):", recipientWhatsapp.trim().length >= 8);
+      console.log("5. ¿Existe objeto dirección?:", recipientAddress !== null);
+      console.log("6. ¿Dirección texto tiene contenido?:", (recipientAddress?.direccion_texto || "").trim().length > 0);
+      console.log("7. ¿Mensaje tiene contenido?:", mensaje.trim().length > 0);
+      console.log("----------------------------------");
     }
   }, [buyerName, buyerWhatsapp, recipientName, recipientWhatsapp, recipientAddress, mensaje, formValido]);
 
