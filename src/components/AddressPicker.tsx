@@ -52,8 +52,6 @@ async function ensureMapsLibraries() {
 }
 
 export function AddressPicker({ value, onChange, label = "Dirección de entrega *", placeholder = "Busca calle, colonia o referencia" }: Props) {
-  console.log("--- DEBUG: AddressPicker intentando inicializar ---");
-
   const autocompleteContainerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -95,6 +93,10 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     if (mapRef.current) return; 
 
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
+    
+    // Log movido aquí: solo se imprimirá cuando el mapa realmente se cree
+    console.log("--- DEBUG: AddressPicker inicializando mapa exitosamente ---");
+
     const g = (window as any).google;
     const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
 
