@@ -60,10 +60,10 @@ export function GiftModal({ product, onClose }: Props) {
   const canMinus = qty > 1;
 
   const confirmar = () => {
-    console.log("Confirmando regalo...", { recipientAddress, formValido });
+    console.log("DEBUG: Datos actuales antes de enviar:", { recipientAddress, formValido });
     
     if (!recipientAddress) {
-      console.log("Error: No hay dirección");
+      console.log("Error: recipientAddress es null");
       return;
     }
     
@@ -202,7 +202,10 @@ export function GiftModal({ product, onClose }: Props) {
           </div>
           <AddressPicker
             value={recipientAddress}
-            onChange={setRecipientAddress}
+            onChange={(val) => {
+              console.log("DEBUG: AddressPicker recibiendo valor:", val);
+              setRecipientAddress(val);
+            }}
             label="Ubicación exacta del festejado *"
             placeholder="Busca la dirección de entrega"
           />
