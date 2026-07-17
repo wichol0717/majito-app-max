@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 
 /**
- * Selector de dirección completo:
- * 1. Nueva API PlaceAutocompleteElement (para cumplir con requisitos de Google)
- * 2. Mapa con marcador arrastrable + Geocoder (para precisión manual)
+ * AddressPicker Component
+ * Versión completa y robusta con manejo profundo de Google Maps API,
+ * Geocodificación y la nueva API de Autocomplete.
  */
 
 export interface AddressValue {
@@ -20,20 +20,26 @@ interface Props {
   placeholder?: string;
 }
 
-// Tuxpan, Veracruz
+// Configuración inicial de coordenadas: Tuxpan, Veracruz
 const TUXPAN = { lat: 20.9569, lng: -97.4083 };
 
-// Loader singleton
+/**
+ * Cargador de librerías de Google Maps (Singleton pattern)
+ * Asegura que el script solo se cargue una vez para evitar errores de duplicación.
+ */
 let loaderPromise: Promise<void> | null = null;
+
 function loadGoogleMaps(apiKey: string): Promise<any> {
   if (typeof window === "undefined") return Promise.resolve();
   if ((window as any).google?.maps?.importLibrary) return ensureMapsLibraries();
   if (loaderPromise) return loaderPromise;
   
   loaderPromise = new Promise((resolve, reject) => {
+    // Definimos el callback global que espera Google
     (window as any).__majitoInitMap = () => {
       ensureMapsLibraries().then(resolve).catch(reject);
     };
+
     const s = document.createElement("script");
     s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=weekly&loading=async&callback=__majitoInitMap&language=es&region=MX&channel=majito_app`;
     s.async = true;
@@ -44,8 +50,14 @@ function loadGoogleMaps(apiKey: string): Promise<any> {
   return loaderPromise;
 }
 
+/**
+ * Función para cargar las librerías específicas necesarias
+ * (Maps, Places, Geocoding)
+ */
 async function ensureMapsLibraries() {
   const g = (window as any).google;
+  if (!g || !g.maps) throw new Error("Google Maps no inicializado correctamente");
+  
   await Promise.all([
     g.maps.importLibrary("maps"),
     g.maps.importLibrary("places"),
@@ -53,19 +65,34 @@ async function ensureMapsLibraries() {
   ]);
 }
 
-export function AddressPicker({ value, onChange, label = "Dirección de entrega *", placeholder = "Busca calle, colonia o referencia" }: Props) {
+export function AddressPicker({ 
+  value, 
+  onChange, 
+  label = "Dirección de entrega *", 
+  placeholder = "Busca calle, colonia o referencia" 
+}: Props) {
+  
+  // Referencias para el DOM
   const autocompleteContainerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
+  
+  // Referencias para las instancias de la API
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
+  
+  // Estados de control
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Mantenemos la referencia de onChange actualizada para evitar cierres (closures)
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  /**
+   * Ciclo de vida: Carga inicial de la API
+   */
   useEffect(() => {
     let cancelled = false;
     const browserKey =
@@ -75,39 +102,51 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
     Promise.resolve(browserKey)
       .then((key) => {
-        if (!key) throw new Error("Maps no está activo.");
+        if (!key) throw new Error("Maps no está activo. Verifica API Key.");
         return loadGoogleMaps(key);
       })
-      .then(() => { if (!cancelled) setReady(true); })
-      .catch((e: any) => { if (!cancelled) setError("Maps no está activo."); });
+      .then(() => { 
+        if (!cancelled) setReady(true); 
+      })
+      .catch((e: any) => { 
+        console.error("Error cargando Google Maps:", e);
+        if (!cancelled) setError("Error al cargar Google Maps."); 
+      });
+      
     return () => { cancelled = true; };
   }, []);
 
+  /**
+   * Ciclo de vida: Inicialización del Mapa, Marcador y Autocomplete
+   */
   useEffect(() => {
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
+    
     const g = (window as any).google;
     const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
 
-    // Inicializar Mapa
+    // 1. Inicializar el mapa
     const map = new g.maps.Map(mapDivRef.current, {
       center: initial,
       zoom: value ? 16 : 13,
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
+      mapTypeId: g.maps.MapTypeId.ROADMAP,
     });
     
-    // Marcador Arrastrable
+    // 2. Inicializar el marcador arrastrable
     const marker = new g.maps.Marker({
       position: initial,
       map,
       draggable: true,
+      animation: g.maps.Animation.DROP,
     });
     
     mapRef.current = map;
     markerRef.current = marker;
 
-    // Geocodificación (cuando se arrastra el marcador)
+    // 3. Geocodificación inversa al soltar el marcador
     const geocoder = new g.maps.Geocoder();
     marker.addListener("dragend", () => {
       const p = marker.getPosition();
@@ -123,25 +162,20 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       });
     });
 
-    // --- NUEVA API: PlaceAutocompleteElement ---
+    // 4. Configurar el Autocomplete Element (Nueva API)
     autocompleteContainerRef.current.innerHTML = "";
     const ac = document.createElement("gmp-place-autocomplete-element");
     
-    // Estilos forzados para asegurar interacción
-    ac.style.display = "block";
-    ac.style.width = "100%";
-    ac.style.minHeight = "44px";
-    ac.style.zIndex = "100"; // Asegurar que esté al frente
-    
+    // Configuración estricta de restricciones
     ac.setAttribute("component-restrictions", 'country:mx');
     ac.setAttribute("placeholder", placeholder);
     
-    // Configuración de campos necesaria para la nueva API
+    // Definir campos requeridos
     (ac as any).requestedFields = ["formattedAddress", "geometry"];
     
     autocompleteContainerRef.current.appendChild(ac);
 
-    // Listener del componente nuevo
+    // Listener del componente
     ac.addEventListener("gmp-placeselect", (event: any) => {
       const place = event.place;
       if (!place || !place.location) return;
@@ -164,12 +198,12 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-foreground">{label}</label>
       
-      {/* Contenedor limpio: eliminamos flex para no colisionar con el componente interno */}
-      <div className="relative w-full">
-        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-20" />
+      {/* Contenedor del buscador: Usamos los selectores Tailwind que funcionaban originalmente */}
+      <div className="relative">
+        <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-10" />
         <div 
             ref={autocompleteContainerRef} 
-            className="w-full border border-mocha/20 rounded-lg bg-white pl-9 min-h-[44px]"
+            className="w-full [&>gmp-place-autocomplete-input]:w-full [&>gmp-place-autocomplete-input]:rounded-lg [&>gmp-place-autocomplete-input]:border [&>gmp-place-autocomplete-input]:border-mocha/20 [&>gmp-place-autocomplete-input]:py-2 [&>gmp-place-autocomplete-input]:pl-9 [&>gmp-place-autocomplete-input]:pr-3 [&>gmp-place-autocomplete-input]:text-sm [&>gmp-place-autocomplete-input]:outline-none focus-within:[&>gmp-place-autocomplete-input]:border-shocking [&>gmp-place-autocomplete-input]:bg-white"
         />
       </div>
 
@@ -185,8 +219,10 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           </div>
         )}
       </div>
+
       {!ready && !error && <p className="text-[11px] text-mocha">Cargando mapa…</p>}
       {error && <p className="text-[11px] text-shocking">{error}</p>}
+      
       {value && (
         <p className="rounded bg-crema px-2 py-1 text-[11px] text-mocha">
           📍 {value.direccion_texto}
