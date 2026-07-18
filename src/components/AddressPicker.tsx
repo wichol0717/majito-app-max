@@ -142,10 +142,14 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         ac.requestedDataFields = ["formattedAddress", "geometry"];
         autocompleteContainerRef.current!.appendChild(ac);
 
+        // DEBUG: Asignar a ventana para consola
+        (window as any).ac = ac; 
+        console.log("DEBUG: Elemento AC creado y asignado a window.ac");
+
         // Función unificada para procesar el lugar
         const processPlace = async (place: any) => {
           if (!place) return;
-          console.log("⏳ Procesando lugar seleccionado...");
+          console.log("⏳ Procesando lugar seleccionado (via ac.value):", place);
           
           // La API nueva requiere fetchFields para obtener datos completos
           await place.fetchFields({ fields: ["formattedAddress", "location"] });
@@ -163,6 +167,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
         // 1. Escuchar eventos oficiales (ac.value es la propiedad correcta en la nueva API)
         ac.addEventListener("gmp-placeselect", (e: any) => {
+          console.log("✅ Evento gmp-placeselect disparado");
           const p = e.place || (e.detail && e.detail.place) || ac.value;
           processPlace(p);
         });
