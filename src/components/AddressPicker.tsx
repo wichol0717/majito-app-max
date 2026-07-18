@@ -171,11 +171,16 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           processPlace(ac.place);
         });
 
-        // 3. Respaldo directo en 'input' (Si el componente guarda el objeto .place al escribir/seleccionar)
+        // 3. Respaldo directo en 'input' (Debounced)
+        let debounceTimer: any;
         ac.addEventListener("input", () => {
-          if (ac.place && ac.place.location) {
-             processPlace(ac.place);
-          }
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                console.log("🔍 [INPUT] Revisando estado del componente...");
+                if (ac.place && ac.place.location) {
+                    processPlace(ac.place);
+                }
+            }, 300);
         });
 
       } catch (err) {
