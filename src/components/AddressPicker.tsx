@@ -19,19 +19,23 @@ interface Props {
   placeholder?: string;
 }
 
-// Tuxpan, Veracruz
+// Tuxpan, Veracruz - Coordenadas base
 const TUXPAN = { lat: 20.9569, lng: -97.4083 };
 
-// Loader singleton
+// Loader singleton para evitar múltiples cargas de script
 let loaderPromise: Promise<void> | null = null;
+
 function loadGoogleMaps(apiKey: string): Promise<any> {
   if (typeof window === "undefined") return Promise.resolve();
   if ((window as any).google?.maps?.importLibrary) return ensureMapsLibraries();
+  
   if (loaderPromise) return loaderPromise;
+  
   loaderPromise = new Promise((resolve, reject) => {
     (window as any).__majitoInitMap = () => {
       ensureMapsLibraries().then(resolve).catch(reject);
     };
+    
     const s = document.createElement("script");
     s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&v=weekly&loading=async&callback=__majitoInitMap&language=es&region=MX&channel=majito_app`;
     s.async = true;
@@ -39,11 +43,13 @@ function loadGoogleMaps(apiKey: string): Promise<any> {
     s.onerror = () => reject(new Error("No se pudo cargar Google Maps"));
     document.head.appendChild(s);
   });
+  
   return loaderPromise;
 }
 
 async function ensureMapsLibraries() {
   const g = (window as any).google;
+  if (!g || !g.maps) return;
   await Promise.all([
     g.maps.importLibrary("maps"),
     g.maps.importLibrary("places"),
@@ -51,7 +57,13 @@ async function ensureMapsLibraries() {
   ]);
 }
 
-export function AddressPicker({ value, onChange, label = "Dirección de entrega *", placeholder = "Busca calle, colonia o referencia" }: Props) {
+export function AddressPicker({ 
+  value, 
+  onChange, 
+  label = "Dirección de entrega *", 
+  placeholder = "Busca calle, colonia o referencia" 
+}: Props) {
+  
   const autocompleteContainerRef = useRef<HTMLDivElement>(null);
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -59,6 +71,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 1. Carga inicial del script de Google Maps
   useEffect(() => {
     let cancelled = false;
     const browserKey =
@@ -70,15 +83,21 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
     Promise.resolve(browserKey)
       .then((key) => {
-        if (!key) throw new Error("Maps no está activo.");
+        if (!key) throw new Error("Maps no está activo: Falta la API Key.");
         return loadGoogleMaps(key);
       })
-      .then(() => { if (!cancelled) setReady(true); })
-      .catch((e: any) => { if (!cancelled) setError("Maps no está activo."); });
+      .then(() => { 
+        if (!cancelled) setReady(true); 
+      })
+      .catch((e: any) => { 
+        console.error(e);
+        if (!cancelled) setError("Error al cargar Google Maps."); 
+      });
+      
     return () => { cancelled = true; };
   }, []);
 
-  // --- Sincronización robusta ---
+  // 2. Sincronización cuando cambia el valor desde afuera
   useEffect(() => {
     if (ready && mapRef.current && markerRef.current && value) {
       const pos = { lat: value.latitud, lng: value.longitud };
@@ -88,10 +107,9 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     }
   }, [value, ready]);
 
+  // 3. Inicialización del Mapa y del Autocomplete
   useEffect(() => {
-    // PROTECCIÓN CONTRA BUCLE INFINITO
-    if (mapRef.current) return; 
-
+    if (mapRef.current) return; // Ya inicializado
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
     
     console.log("--- DEBUG: AddressPicker inicializando mapa exitosamente ---");
@@ -99,6 +117,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
     const g = (window as any).google;
     const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
 
+    // Crear mapa
     const map = new g.maps.Map(mapDivRef.current, {
       center: initial,
       zoom: value ? 16 : 13,
@@ -107,22 +126,25 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       fullscreenControl: false,
     });
 
+    // Crear marcador arrastrable
     const marker = new g.maps.Marker({
       position: initial,
       map,
       draggable: true,
     });
+    
     mapRef.current = map;
     markerRef.current = marker;
 
     const geocoder = new g.maps.Geocoder();
 
+    // Evento al arrastrar marcador
     marker.addListener("dragend", () => {
-      console.log("📍 [DEBUG] Marcador arrastrado manualmente...");
       const p = marker.getPosition();
       if (!p) return;
       const lat = p.lat();
       const lng = p.lng();
+      
       geocoder.geocode({ location: { lat, lng } }, (results: any, status: string) => {
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
@@ -131,7 +153,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
       });
     });
 
-    // Inicializar Buscador
+    // Inicializar componente Autocomplete
     setTimeout(() => {
       autocompleteContainerRef.current!.innerHTML = "";
       try {
@@ -146,16 +168,17 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
         (window as any).ac = ac; 
         console.log("DEBUG: Elemento AC creado y asignado a window.ac");
 
-        // Función unificada para procesar el lugar
+        // Lógica de procesamiento de lugar seleccionado
         const processPlace = async (place: any) => {
-          if (!place) {
-              console.warn("⚠️ processPlace llamado con lugar nulo");
-              return;
-          }
+          if (!place) return;
           console.log("⏳ Procesando lugar seleccionado:", place);
           
           try {
-            await place.fetchFields({ fields: ["formattedAddress", "location"] });
+            // Aseguramos que tenemos los datos
+            if (place.fetchFields) {
+                await place.fetchFields({ fields: ["formattedAddress", "location"] });
+            }
+            
             if (!place.location) return;
             
             const lat = place.location.lat();
@@ -172,13 +195,12 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           }
         };
 
-        // 1. Escuchar evento principal
+        // Escuchar eventos
         ac.addEventListener("gmp-placeselect", (e: any) => {
           console.log("✅ Evento gmp-placeselect detectado");
           processPlace(e.place || ac.value);
         });
 
-        // 2. Escuchar evento change (más genérico)
         ac.addEventListener("change", () => {
           console.log("🚨 Evento 'change' detectado en AC");
           if (ac.value) processPlace(ac.value);
@@ -192,9 +214,12 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   
+  // Renderizado
   return (
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-foreground">{label}</label>
+      
+      {/* Contenedor del buscador */}
       <div className="relative">
         <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-10" />
         <div 
@@ -202,6 +227,8 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
             className="w-full [&>gmp-place-autocomplete-input]:w-full [&>gmp-place-autocomplete-input]:rounded-lg [&>gmp-place-autocomplete-input]:border [&>gmp-place-autocomplete-input]:border-mocha/20 [&>gmp-place-autocomplete-input]:py-2 [&>gmp-place-autocomplete-input]:pl-9 [&>gmp-place-autocomplete-input]:pr-3 [&>gmp-place-autocomplete-input]:text-sm [&>gmp-place-autocomplete-input]:outline-none focus-within:[&>gmp-place-autocomplete-input]:border-shocking"
         />
       </div>
+
+      {/* Contenedor del mapa */}
       <div className="relative">
         <div
           ref={mapDivRef}
@@ -214,8 +241,10 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           </div>
         )}
       </div>
+      
       {!ready && !error && <p className="text-[11px] text-mocha">Cargando mapa…</p>}
       {error && <p className="text-[11px] text-shocking">{error}</p>}
+      
       {value && (
         <p className="rounded bg-crema px-2 py-1 text-[11px] text-mocha">
           📍 {value.direccion_texto}
