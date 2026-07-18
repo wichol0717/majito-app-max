@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { MapPin } from "lucide-react";
 
 /**
+ * AddressPicker.tsx
  * Selector de dirección con Google Places Autocomplete (Nueva API) + mapa arrastrable.
  * Devuelve al padre: texto legible, latitud y longitud (coordenadas GPS).
+ * Versión completa y expandida.
  */
 
 export interface AddressValue {
@@ -50,6 +52,7 @@ function loadGoogleMaps(apiKey: string): Promise<any> {
 async function ensureMapsLibraries() {
   const g = (window as any).google;
   if (!g || !g.maps) return;
+  
   await Promise.all([
     g.maps.importLibrary("maps"),
     g.maps.importLibrary("places"),
@@ -71,7 +74,7 @@ export function AddressPicker({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 1. Carga inicial del script de Google Maps
+  // 1. Efecto: Carga inicial del script de Google Maps
   useEffect(() => {
     let cancelled = false;
     const browserKey =
@@ -90,14 +93,14 @@ export function AddressPicker({
         if (!cancelled) setReady(true); 
       })
       .catch((e: any) => { 
-        console.error(e);
+        console.error("Error al cargar la API de Maps:", e);
         if (!cancelled) setError("Error al cargar Google Maps."); 
       });
       
     return () => { cancelled = true; };
   }, []);
 
-  // 2. Sincronización cuando cambia el valor desde afuera
+  // 2. Efecto: Sincronización cuando cambia el valor desde afuera
   useEffect(() => {
     if (ready && mapRef.current && markerRef.current && value) {
       const pos = { lat: value.latitud, lng: value.longitud };
@@ -107,9 +110,10 @@ export function AddressPicker({
     }
   }, [value, ready]);
 
-  // 3. Inicialización del Mapa y del Autocomplete
+  // 3. Efecto: Inicialización completa del Mapa y del Autocomplete
   useEffect(() => {
-    if (mapRef.current) return; // Ya inicializado
+    // Protección para evitar inicializaciones duplicadas
+    if (mapRef.current) return; 
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
     
     console.log("--- DEBUG: AddressPicker inicializando mapa exitosamente ---");
@@ -140,6 +144,7 @@ export function AddressPicker({
 
     // Evento al arrastrar marcador
     marker.addListener("dragend", () => {
+      console.log("📍 [DEBUG] Marcador arrastrado manualmente...");
       const p = marker.getPosition();
       if (!p) return;
       const lat = p.lat();
@@ -149,6 +154,8 @@ export function AddressPicker({
         const txt = status === "OK" && results?.[0]?.formatted_address
           ? results[0].formatted_address
           : `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+        
+        console.log("🚀 [DRAGEND] Disparando onChange con:", { txt, lat, lng });
         onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
       });
     });
@@ -164,7 +171,7 @@ export function AddressPicker({
         ac.requestedDataFields = ["formattedAddress", "geometry"];
         autocompleteContainerRef.current!.appendChild(ac);
 
-        // DEBUG: Asignar a ventana para consola
+        // DEBUG: Asignar a ventana para consola para inspección
         (window as any).ac = ac; 
         console.log("DEBUG: Elemento AC creado y asignado a window.ac");
 
@@ -174,7 +181,7 @@ export function AddressPicker({
           console.log("⏳ Procesando lugar seleccionado:", place);
           
           try {
-            // Aseguramos que tenemos los datos
+            // Aseguramos que tenemos los datos de la API
             if (place.fetchFields) {
                 await place.fetchFields({ fields: ["formattedAddress", "location"] });
             }
@@ -185,7 +192,7 @@ export function AddressPicker({
             const lng = place.location.lng();
             const txt = place.formattedAddress || "";
             
-            console.log("🚀 DISPARANDO onChange con:", { txt, lat, lng });
+            console.log("🚀 [AUTOC] DISPARANDO onChange con:", { txt, lat, lng });
             map.setCenter({ lat, lng });
             map.setZoom(17);
             marker.setPosition({ lat, lng });
@@ -195,7 +202,7 @@ export function AddressPicker({
           }
         };
 
-        // Escuchar eventos
+        // Escuchar eventos oficiales de la nueva API
         ac.addEventListener("gmp-placeselect", (e: any) => {
           console.log("✅ Evento gmp-placeselect detectado");
           processPlace(e.place || ac.value);
@@ -242,14 +249,35 @@ export function AddressPicker({
         )}
       </div>
       
+      {/* Indicadores de carga */}
       {!ready && !error && <p className="text-[11px] text-mocha">Cargando mapa…</p>}
       {error && <p className="text-[11px] text-shocking">{error}</p>}
       
+      {/* Visualización de la dirección seleccionada */}
       {value && (
         <p className="rounded bg-crema px-2 py-1 text-[11px] text-mocha">
           📍 {value.direccion_texto}
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * BOTÓN DE CHECKOUT
+ */
+export function CheckoutButton({ disabled, onClick, loading }: { disabled: boolean; onClick: () => void; loading?: boolean }) {
+  return (
+    <button
+      disabled={disabled || loading}
+      onClick={onClick}
+      className={`w-full py-4 rounded-xl font-bold transition-all ${
+        disabled 
+          ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50" 
+          : "bg-shocking text-white shadow-lg hover:scale-[1.02]"
+      }`}
+    >
+      {loading ? "Procesando..." : "Confirmar Pedido"}
+    </button>
   );
 }
