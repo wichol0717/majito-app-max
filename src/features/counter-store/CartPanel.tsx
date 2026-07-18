@@ -36,13 +36,24 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const cuponesDisponibles: Cupon[] = useMemo(() => parseCupones((settings as any).cupones), [settings]);
 
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
-  const [direccion, setDireccion] = useState<AddressValue | null>(null);
-// Evita que el mapa se reinicie solo
+  
+  // 1. Inicializar con el prop 'address' global
+  const [direccion, setDireccion] = useState<AddressValue | null>(address);
+
+  // 2. Mantener sincronizado si el prop cambia desde afuera
+  useEffect(() => {
+    setDireccion(address);
+  }, [address]);
+
+  // Evita que el mapa se reinicie solo
   const memoizedAddress = useMemo(() => direccion, [direccion]);
 
+  // 3. Avisar al papá (setAddress) cuando el usuario cambie el pin
   const handleAddressChange = useCallback((val: any) => {
     setDireccion(val);
-  }, [setDireccion]);
+    setAddress(val); 
+  }, [setAddress]);
+  
   const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
 
@@ -111,10 +122,10 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
 
   const hayMostrador = items.some((i) => !i.isGift);
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
-  const direccionOk = entrega === "tienda" || !hayMostrador || (!!direccion && direccion.direccion_texto.length >= 5);
-  const puedeConfirmarWhats =
-    items.length > 0 &&
-    direccionOk;
+  
+  const direccionOk = entrega === "tienda" || (entrega === "envio" && direccion && direccion.direccion_texto.length >= 5);
+  const puedeConfirmarWhats = items.length > 0 && direccionOk;
+  
   const puedeConfirmarSpei =
     puedeConfirmarWhats &&
     buyerName.trim().length >= 2 &&
@@ -147,25 +158,25 @@ useEffect(() => {
     const giftItems = items.filter((i) => i.isGift);
 
     if (regularItems.length > 0) {
-      lineas.push("*🛍️ Compra de mostrador:*");
+      lineas.push("* Compra de mostrador:*");
       regularItems.forEach((i) => {
         const sub = i.quantity * Number(i.product.precio);
         lineas.push(`• ${i.quantity}× ${i.product.nombre} — $${sub.toFixed(2)}`);
         if (i.cakeMessage && i.cakeMessage.trim()) {
-          lineas.push(`   💌 Mensaje en pastel: "${i.cakeMessage.trim()}"`);
+          lineas.push(`    Mensaje en pastel: "${i.cakeMessage.trim()}"`);
         }
       });
       if (entrega === "envio" && direccion) {
-        lineas.push(`   📍 Enviar a: ${direccion.direccion_texto}`);
-        lineas.push(`   🗺️ https://www.google.com/maps?q=${direccion.latitud},${direccion.longitud}`);
+        lineas.push(`    Enviar a: ${direccion.direccion_texto}`);
+        lineas.push(`    https://www.google.com/maps?q=${direccion.latitud},${direccion.longitud}`);
       } else {
-        lineas.push("   🏪 Recoger en local");
+        lineas.push("    Recoger en local");
       }
       lineas.push("");
     }
 
     if (giftItems.length > 0) {
-      lineas.push("*🎁 Regalos (envío individual):*");
+      lineas.push("* Regalos (envío individual):*");
       const yaCobradas = new Set<string>();
       if (entrega === "envio" && direccion) {
         yaCobradas.add(normalizarDir(direccion.direccion_texto));
@@ -174,20 +185,20 @@ useEffect(() => {
         const sub = i.quantity * Number(i.product.precio);
         const g = i.giftDetails;
         lineas.push(`— Regalo #${idx + 1}: ${i.quantity}× ${i.product.nombre} — $${sub.toFixed(2)}`);
-        if (i.giftMessage) lineas.push(`   💌 Mensaje: "${i.giftMessage}"`);
+        if (i.giftMessage) lineas.push(`    Mensaje: "${i.giftMessage}"`);
         if (g) {
-          lineas.push(`   👤 De: ${g.buyerName} (WA: ${g.buyerWhatsapp})`);
-          lineas.push(`   🎉 Para: ${g.recipientName} (WA: ${g.recipientWhatsapp})`);
-          lineas.push(`   📍 Entregar en: ${g.recipientLocation}`);
+          lineas.push(`    De: ${g.buyerName} (WA: ${g.buyerWhatsapp})`);
+          lineas.push(`    Para: ${g.recipientName} (WA: ${g.recipientWhatsapp})`);
+          lineas.push(`    Entregar en: ${g.recipientLocation}`);
           if (g.recipientLat != null && g.recipientLng != null) {
-            lineas.push(`   🗺️ https://www.google.com/maps?q=${g.recipientLat},${g.recipientLng}`);
+            lineas.push(`    https://www.google.com/maps?q=${g.recipientLat},${g.recipientLng}`);
           }
           const key = normalizarDir(g.recipientLocation);
           if (yaCobradas.has(key)) {
-            lineas.push(`   🚚 Envío: incluido (misma dirección ya cobrada)`);
+            lineas.push(`    Envío: incluido (misma dirección ya cobrada)`);
           } else {
             yaCobradas.add(key);
-            lineas.push(`   🚚 Envío a domicilio del festejado: $${ENVIO_COSTO.toFixed(2)}`);
+            lineas.push(`    Envío a domicilio del festejado: $${ENVIO_COSTO.toFixed(2)}`);
           }
         }
       });
@@ -342,8 +353,8 @@ useEffect(() => {
       try {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
         const extras: string[] = [];
-        if (comprobanteUrl) extras.push(`🧾 Comprobante SPEI: ${comprobanteUrl}`);
-        if (primerId) extras.push(`🔎 Semáforo del pedido: ${origin}/pedido/${primerId}`);
+        if (comprobanteUrl) extras.push(` Comprobante SPEI: ${comprobanteUrl}`);
+        if (primerId) extras.push(` Semáforo del pedido: ${origin}/pedido/${primerId}`);
         const msgFinal = extras.length ? `${mensajeWhats}\n\n${extras.join("\n")}` : mensajeWhats;
         const url = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msgFinal)}`;
         if (waWin && !waWin.closed) {
@@ -416,7 +427,7 @@ useEffect(() => {
                 />
               ) : (
                 <div className="flex h-16 w-16 flex-none items-center justify-center rounded-lg bg-sunset text-2xl">
-                  🍰
+                  
                 </div>
               )}
               <div className="flex flex-1 flex-col">
@@ -430,7 +441,7 @@ useEffect(() => {
                         </p>
                         {i.giftDetails && (
                           <p className="text-mocha">
-                            Para <strong>{i.giftDetails.recipientName}</strong> → {i.giftDetails.recipientLocation}
+                            Para <strong>{i.giftDetails.recipientName}</strong>  {i.giftDetails.recipientLocation}
                           </p>
                         )}
                       </div>
@@ -523,12 +534,12 @@ useEffect(() => {
           )}
           {showGiftHint && (
             <p className="rounded bg-white/60 p-2 text-[11px] text-mocha">
-              Toca el ícono 🎁 sobre cualquier producto del mostrador y llena los datos del destinatario. El mensaje viaja con el pedido por WhatsApp.
+              Toca el ícono  sobre cualquier producto del mostrador y llena los datos del destinatario. El mensaje viaja con el pedido por WhatsApp.
             </p>
           )}
           {hayPastel && (
             <p className="rounded bg-white/60 p-2 text-[11px] text-mocha">
-              💌 Escribe el mensaje del pastel en cada producto de la lista.
+               Escribe el mensaje del pastel en cada producto de la lista.
             </p>
           )}
         </div>
