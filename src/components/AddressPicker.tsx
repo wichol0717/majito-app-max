@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin, CheckCircle2 } from "lucide-react";
 
 /**
  * AddressPicker.tsx
@@ -74,6 +74,9 @@ export function AddressPicker({
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Validación auxiliar para asegurar que no enviamos coordenadas cero
+  const isValidCoordinate = (lat: number, lng: number) => lat !== 0 && lng !== 0;
+
   // 1. Efecto: Carga inicial del script de Google Maps
   useEffect(() => {
     let cancelled = false;
@@ -119,7 +122,7 @@ export function AddressPicker({
     console.log("--- DEBUG: AddressPicker inicializando mapa exitosamente ---");
 
     const g = (window as any).google;
-    const initial = value ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
+    const initial = (value && isValidCoordinate(value.latitud, value.longitud)) ? { lat: value.latitud, lng: value.longitud } : TUXPAN;
 
     // Crear mapa
     const map = new g.maps.Map(mapDivRef.current, {
@@ -254,9 +257,9 @@ export function AddressPicker({
       {error && <p className="text-[11px] text-shocking">{error}</p>}
       
       {/* Visualización de la dirección seleccionada */}
-      {value && (
-        <p className="rounded bg-crema px-2 py-1 text-[11px] text-mocha">
-          📍 {value.direccion_texto}
+      {value && isValidCoordinate(value.latitud, value.longitud) && (
+        <p className="flex items-center gap-1 rounded bg-crema px-2 py-1 text-[11px] text-mocha">
+          <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {value.direccion_texto}
         </p>
       )}
     </div>
@@ -271,10 +274,10 @@ export function CheckoutButton({ disabled, onClick, loading }: { disabled: boole
     <button
       disabled={disabled || loading}
       onClick={onClick}
-      className={`w-full py-4 rounded-xl font-bold transition-all ${
+      className={`w-full py-4 rounded-xl font-bold transition-all duration-300 ${
         disabled 
           ? "bg-gray-300 text-gray-500 cursor-not-allowed opacity-50" 
-          : "bg-shocking text-white shadow-lg hover:scale-[1.02]"
+          : "bg-shocking text-white shadow-lg shadow-shocking/20 hover:scale-[1.02] active:scale-[0.98]"
       }`}
     >
       {loading ? "Procesando..." : "Confirmar Pedido"}
