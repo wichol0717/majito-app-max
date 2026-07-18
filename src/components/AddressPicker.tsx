@@ -148,46 +148,40 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
 
         // Función unificada para procesar el lugar
         const processPlace = async (place: any) => {
-          if (!place) return;
-          console.log("⏳ Procesando lugar seleccionado (via ac.value):", place);
+          if (!place) {
+              console.warn("⚠️ processPlace llamado con lugar nulo");
+              return;
+          }
+          console.log("⏳ Procesando lugar seleccionado:", place);
           
-          // La API nueva requiere fetchFields para obtener datos completos
-          await place.fetchFields({ fields: ["formattedAddress", "location"] });
-          if (!place.location) return;
-          
-          const lat = place.location.lat();
-          const lng = place.location.lng();
-          const txt = place.formattedAddress || "";
-          
-          map.setCenter({ lat, lng });
-          map.setZoom(17);
-          marker.setPosition({ lat, lng });
-          onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+          try {
+            await place.fetchFields({ fields: ["formattedAddress", "location"] });
+            if (!place.location) return;
+            
+            const lat = place.location.lat();
+            const lng = place.location.lng();
+            const txt = place.formattedAddress || "";
+            
+            console.log("🚀 DISPARANDO onChange con:", { txt, lat, lng });
+            map.setCenter({ lat, lng });
+            map.setZoom(17);
+            marker.setPosition({ lat, lng });
+            onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+          } catch (e) {
+            console.error("❌ Error al procesar lugar:", e);
+          }
         };
 
-        // 1. Escuchar eventos oficiales (ac.value es la propiedad correcta en la nueva API)
+        // 1. Escuchar evento principal
         ac.addEventListener("gmp-placeselect", (e: any) => {
-          console.log("✅ Evento gmp-placeselect disparado");
-          const p = e.place || (e.detail && e.detail.place) || ac.value;
-          processPlace(p);
+          console.log("✅ Evento gmp-placeselect detectado");
+          processPlace(e.place || ac.value);
         });
 
-        // 2. Escuchar 'change'
+        // 2. Escuchar evento change (más genérico)
         ac.addEventListener("change", () => {
-          console.log("🚨 [EVENTO] 'change' detectado");
+          console.log("🚨 Evento 'change' detectado en AC");
           if (ac.value) processPlace(ac.value);
-        });
-
-        // 3. Respaldo directo en 'input' (Debounced usando ac.value)
-        let debounceTimer: any;
-        ac.addEventListener("input", () => {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                console.log("🔍 [INPUT] Revisando ac.value...");
-                if (ac.value) {
-                    processPlace(ac.value);
-                }
-            }, 300);
         });
 
       } catch (err) {
