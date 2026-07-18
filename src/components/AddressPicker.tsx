@@ -147,6 +147,7 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           if (!place) return;
           console.log("⏳ Procesando lugar seleccionado...");
           
+          // La API nueva requiere fetchFields para obtener datos completos
           await place.fetchFields({ fields: ["formattedAddress", "location"] });
           if (!place.location) return;
           
@@ -160,25 +161,26 @@ export function AddressPicker({ value, onChange, label = "Dirección de entrega 
           onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
         };
 
-        // 1. Escuchar eventos oficiales
+        // 1. Escuchar eventos oficiales (ac.value es la propiedad correcta en la nueva API)
         ac.addEventListener("gmp-placeselect", (e: any) => {
-          processPlace(e.place || (e.detail && e.detail.place));
+          const p = e.place || (e.detail && e.detail.place) || ac.value;
+          processPlace(p);
         });
 
-        // 2. Escuchar 'change' (Respaldo robusto)
+        // 2. Escuchar 'change'
         ac.addEventListener("change", () => {
           console.log("🚨 [EVENTO] 'change' detectado");
-          processPlace(ac.place);
+          if (ac.value) processPlace(ac.value);
         });
 
-        // 3. Respaldo directo en 'input' (Debounced)
+        // 3. Respaldo directo en 'input' (Debounced usando ac.value)
         let debounceTimer: any;
         ac.addEventListener("input", () => {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
-                console.log("🔍 [INPUT] Revisando estado del componente...");
-                if (ac.place && ac.place.location) {
-                    processPlace(ac.place);
+                console.log("🔍 [INPUT] Revisando ac.value...");
+                if (ac.value) {
+                    processPlace(ac.value);
                 }
             }, 300);
         });
