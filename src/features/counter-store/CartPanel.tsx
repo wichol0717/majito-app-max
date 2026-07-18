@@ -14,8 +14,12 @@ function generarReferencia() {
   for (let i = 0; i < 4; i++) s += abc[Math.floor(Math.random() * abc.length)];
   return `MAJITO-${s}`;
 }
+interface CartPanelProps {
+  address: AddressValue | null;
+  setAddress: (v: AddressValue | null) => void;
+}
 
-export function CartPanel() {
+export function CartPanel({ address, setAddress }: CartPanelProps) {
   const { items, increment, decrement, remove, subtotal, totalItems, hasAnyGift, clear, addToCart, setCakeMessage } =
     useCart();
   const { settings } = useAppSettings();
@@ -37,9 +41,9 @@ export function CartPanel() {
   const memoizedAddress = useMemo(() => direccion, [direccion]);
 
   const handleAddressChange = useCallback((val: any) => {
-  console.log("🚀 [DEBUG] El padre recibió la dirección:", val); // <--- AÑADE ESTO
-  setDireccion(val);
-}, [setDireccion]);const [buyerName, setBuyerName] = useState("");
+    setDireccion(val);
+  }, [setDireccion]);
+  const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
 
   const [metodo, setMetodo] = useState<"efectivo" | "spei">("efectivo");
