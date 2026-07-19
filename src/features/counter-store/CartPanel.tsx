@@ -125,11 +125,11 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
 
   // Definición corregida para evitar el "undefined"
   // Definición segura
-  const direccionOk = 
-    entrega === "tienda" || 
-  (entrega === "envio" && !!direccion && (direccion?.direccion_texto?.length ?? 0) >= 5);
-  const puedeConfirmarWhats = (items.length > 0 && direccionOk === true);
-
+ // Definición robusta para evitar errores de undefined
+  const direccionOk = entrega === "tienda" || (!!direccion && typeof direccion.direccion_texto === 'string' && direccion.direccion_texto.length >= 5);
+  
+  // Definición simplificada para activar el botón
+  const puedeConfirmarWhats = items.length > 0 && direccionOk;
   const puedeConfirmarSpei =
     puedeConfirmarWhats === true &&
     buyerName.trim().length >= 2 &&
