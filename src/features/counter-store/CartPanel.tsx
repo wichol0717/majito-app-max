@@ -122,16 +122,19 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
 
   const hayMostrador = items.some((i) => !i.isGift);
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
-  
-  const direccionOk = entrega === "tienda" || (entrega === "envio" && direccion && direccion.direccion_texto.length >= 5);
-  const puedeConfirmarWhats = items.length > 0 && direccionOk;
-  
+
+  // Definición corregida para evitar el "undefined"
+  const direccionOk = 
+    entrega === "tienda" || 
+    (entrega === "envio" && direccion !== null && direccion.direccion_texto.length >= 5);
+
+  const puedeConfirmarWhats = (items.length > 0 && direccionOk === true);
+
   const puedeConfirmarSpei =
-    puedeConfirmarWhats &&
+    puedeConfirmarWhats === true &&
     buyerName.trim().length >= 2 &&
     buyerWhatsapp.trim().length >= 8 &&
     !!comprobanteUrl;
-
     // --- DIAGNÓSTICO DE BOTÓN SPEI ---
   useEffect(() => {
     console.log("--- ESTADO DEL BOTÓN SPEI ---");
