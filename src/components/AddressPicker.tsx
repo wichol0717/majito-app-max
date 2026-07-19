@@ -189,19 +189,31 @@ export function AddressPicker({
                 await place.fetchFields({ fields: ["formattedAddress", "location"] });
             }
             
-            if (!place.location) return;
-            
-            // Fix robusto: verifica si es función o propiedad directamente
+            // Extracción segura de coordenadas
+            let lat = 0;
+            let lng = 0;
             const loc = place.location;
-            const lat = typeof loc.lat === 'function' ? loc.lat() : loc.lat;
-            const lng = typeof loc.lng === 'function' ? loc.lng() : loc.lng;
+
+            if (loc) {
+               lat = typeof loc.lat === 'function' ? loc.lat() : loc.lat;
+               lng = typeof loc.lng === 'function' ? loc.lng() : loc.lng;
+            } else if (place.geometry?.location) {
+               lat = typeof place.geometry.location.lat === 'function' ? place.geometry.location.lat() : place.geometry.location.lat;
+               lng = typeof place.geometry.location.lng === 'function' ? place.geometry.location.lng() : place.geometry.location.lng;
+            }
+
             const txt = place.formattedAddress || "";
             
-            console.log("🚀 [AUTOC] DISPARANDO onChange con:", { txt, lat, lng });
-            map.setCenter({ lat, lng });
-            map.setZoom(17);
-            marker.setPosition({ lat, lng });
-            onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+            console.log("🚀 [AUTOC] Intento de onChange con:", { txt, lat, lng });
+            
+            if (lat !== 0 && lng !== 0 && txt.length > 0) {
+              map.setCenter({ lat, lng });
+              map.setZoom(17);
+              marker.setPosition({ lat, lng });
+              onChange({ direccion_texto: txt, latitud: lat, longitud: lng });
+            } else {
+              console.warn("⚠️ No se pudo obtener lat/lng o dirección válida del lugar seleccionado.");
+            }
           } catch (e) {
             console.error("❌ Error al procesar lugar:", e);
           }
@@ -211,11 +223,6 @@ export function AddressPicker({
         ac.addEventListener("gmp-placeselect", (e: any) => {
           console.log("✅ Evento gmp-placeselect detectado");
           processPlace(e.place || ac.value);
-        });
-
-        ac.addEventListener("change", () => {
-          console.log("🚨 Evento 'change' detectado en AC");
-          if (ac.value) processPlace(ac.value);
         });
 
       } catch (err) {
