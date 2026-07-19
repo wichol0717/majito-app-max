@@ -5,7 +5,7 @@ import { MapPin, CheckCircle2 } from "lucide-react";
  * AddressPicker.tsx
  * Selector de dirección con Google Places Autocomplete (Nueva API) + mapa arrastrable.
  * Devuelve al padre: texto legible, latitud y longitud (coordenadas GPS).
- * Versión completa y expandida con perforación de Shadow DOM y Memoización.
+ * Versión completa y expandida con perforación de Shadow DOM y Geocoding Fallback.
  */
 
 export interface AddressValue {
@@ -60,7 +60,6 @@ async function ensureMapsLibraries() {
   ]);
 }
 
-// Cambiamos 'export function AddressPicker' por una función interna
 function AddressPickerComponent({ 
   value, 
   onChange, 
@@ -116,7 +115,6 @@ function AddressPickerComponent({
 
   // 3. Efecto: Inicialización completa del Mapa y del Autocomplete
   useEffect(() => {
-    // Protección para evitar inicializaciones duplicadas
     if (mapRef.current) return; 
     if (!ready || !mapDivRef.current || !autocompleteContainerRef.current) return;
     
@@ -237,10 +235,8 @@ function AddressPickerComponent({
 
         // Escucha cuando el usuario da clic fuera
         ac.addEventListener("focusout", () => {
-          // Intentar rescatar el texto de 3 formas distintas
           let rawText = ac.inputValue || realTimeText || "";
           
-          // Intentar perforar el Shadow DOM si los otros métodos fallan
           if (!rawText && ac.shadowRoot) {
               const innerInput = ac.shadowRoot.querySelector('input');
               if (innerInput) {
@@ -250,10 +246,22 @@ function AddressPickerComponent({
 
           console.log("🚨 [ADDRESS PICKER] focusout detectado. Texto rescatado:", rawText);
           
-          // Si por fin logramos rescatar el texto
           if (rawText.length > 5) {
-             console.warn("⚠️ Enviando texto manual por fallback (focusout):", rawText);
-             onChange({ direccion_texto: rawText, latitud: 0, longitud: 0 });
+             console.warn("⚠️ Buscando coordenadas GPS para el texto manual:", rawText);
+             
+             // Convertimos el texto manual a coordenadas GPS reales en Tuxpan de forma silenciosa
+             geocoder.geocode({ address: `${rawText}, Túxpam de Rodríguez Cano, Veracruz` }, (results: any, status: string) => {
+               if (status === "OK" && results?.[0]?.geometry?.location) {
+                 const coords = results[0].geometry.location;
+                 const lat = coords.lat();
+                 const lng = coords.lng();
+                 console.log("🎯 [GEOCODING SUCCESS] Coordenadas obtenidas:", lat, lng);
+                 onChange({ direccion_texto: rawText, latitud: lat, longitud: lng });
+               } else {
+                 console.warn("⚠️ Geocoding no obtuvo coordenadas precisas, enviando base.");
+                 onChange({ direccion_texto: rawText, latitud: 0, longitud: 0 });
+               }
+             });
           }
         });
 
@@ -265,12 +273,10 @@ function AddressPickerComponent({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   
-  // Renderizado
   return (
     <div className="space-y-2">
       <label className="block text-xs font-semibold text-foreground">{label}</label>
       
-      {/* Contenedor del buscador */}
       <div className="relative">
         <MapPin className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-shocking z-10" />
         <div 
@@ -279,7 +285,6 @@ function AddressPickerComponent({
         />
       </div>
 
-      {/* Contenedor del mapa */}
       <div className="relative">
         <div
           ref={mapDivRef}
@@ -293,11 +298,9 @@ function AddressPickerComponent({
         )}
       </div>
       
-      {/* Indicadores de carga */}
       {!ready && !error && <p className="text-[11px] text-mocha">Cargando mapa…</p>}
       {error && <p className="text-[11px] text-shocking">{error}</p>}
       
-      {/* Visualización de la dirección seleccionada */}
       {value && isValidCoordinate(value.latitud, value.longitud) && (
         <p className="flex items-center gap-1 rounded bg-crema px-2 py-1 text-[11px] text-mocha">
           <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {value.direccion_texto}
@@ -307,7 +310,6 @@ function AddressPickerComponent({
   );
 }
 
-// Exportamos la versión Memoizada para evitar el parpadeo y la pérdida de datos
 export const AddressPicker = React.memo(AddressPickerComponent);
 
 /**
