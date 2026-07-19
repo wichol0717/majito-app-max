@@ -41,9 +41,10 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const [direccion, setDireccion] = useState<AddressValue | null>(address);
 
   // 2. Mantener sincronizado si el prop cambia desde afuera
-  useEffect(() => {
-    setDireccion(address);
-  }, [address]);
+  // Borra este bloque completo:
+useEffect(() => {
+  setDireccion(address);
+}, [address]);
 
   // Evita que el mapa se reinicie solo
   const memoizedAddress = useMemo(() => direccion, [direccion]);
