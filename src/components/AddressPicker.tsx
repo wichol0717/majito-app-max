@@ -191,8 +191,10 @@ export function AddressPicker({
             
             if (!place.location) return;
             
-            const lat = place.location.lat();
-            const lng = place.location.lng();
+            // Fix robusto: verifica si es función o propiedad directamente
+            const loc = place.location;
+            const lat = typeof loc.lat === 'function' ? loc.lat() : loc.lat;
+            const lng = typeof loc.lng === 'function' ? loc.lng() : loc.lng;
             const txt = place.formattedAddress || "";
             
             console.log("🚀 [AUTOC] DISPARANDO onChange con:", { txt, lat, lng });
