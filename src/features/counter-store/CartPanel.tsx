@@ -124,10 +124,10 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
 
   // Definición corregida para evitar el "undefined"
+  // Definición segura
   const direccionOk = 
     entrega === "tienda" || 
-    (entrega === "envio" && direccion !== null && direccion.direccion_texto.length >= 5);
-
+  (entrega === "envio" && !!direccion && (direccion?.direccion_texto?.length ?? 0) >= 5);
   const puedeConfirmarWhats = (items.length > 0 && direccionOk === true);
 
   const puedeConfirmarSpei =
