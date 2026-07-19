@@ -5,7 +5,7 @@ import { MapPin, CheckCircle2 } from "lucide-react";
  * AddressPicker.tsx
  * Selector de dirección con Google Places Autocomplete (Nueva API) + mapa arrastrable.
  * Devuelve al padre: texto legible, latitud y longitud (coordenadas GPS).
- * Versión completa y expandida.
+ * Versión completa y expandida con perforación de Shadow DOM.
  */
 
 export interface AddressValue {
@@ -174,7 +174,6 @@ export function AddressPicker({
         ac.requestedDataFields = ["formattedAddress", "geometry"];
         autocompleteContainerRef.current!.appendChild(ac);
 
-        // DEBUG: Asignar a ventana para consola para inspección
         (window as any).ac = ac; 
         console.log("DEBUG: Elemento AC creado y asignado a window.ac");
 
@@ -184,12 +183,10 @@ export function AddressPicker({
           console.log("⏳ Procesando lugar seleccionado:", place);
           
           try {
-            // Aseguramos que tenemos los datos de la API
             if (place.fetchFields) {
                 await place.fetchFields({ fields: ["formattedAddress", "location"] });
             }
             
-            // Extracción segura de coordenadas
             let lat = 0;
             let lng = 0;
             const loc = place.location;
@@ -225,26 +222,34 @@ export function AddressPicker({
           processPlace(e.place || ac.value);
         });
 
-        // NUEVO: Escuchar evento change genérico y forzar texto si no hay place
+        // TRAMPA CONTRA EL SHADOW DOM: Capturar el texto tecla por tecla en tiempo real
+        let realTimeText = "";
+        ac.addEventListener("input", (e: any) => {
+           realTimeText = e.target.value || ac.inputValue || "";
+        });
+
         ac.addEventListener("change", () => {
-          console.log("🚨 [ADDRESS PICKER] Evento 'change' disparado. Valor actual del input:", ac.value);
           if (ac.value) {
             processPlace(ac.value);
-          } else {
-             const rawText = autocompleteContainerRef.current?.querySelector('input')?.value || "";
-             console.warn("⚠️ No hay objeto place, intentando enviar texto crudo:", rawText);
-             if (rawText.length > 5) {
-                 onChange({ direccion_texto: rawText, latitud: 0, longitud: 0 });
-             }
           }
         });
 
-        // NUEVO ANEXO: Escucha cuando el usuario escribe algo y da clic fuera (pierde el foco)
+        // Escucha cuando el usuario da clic fuera
         ac.addEventListener("focusout", () => {
-          const rawText = ac.inputValue || autocompleteContainerRef.current?.querySelector('input')?.value || "";
-          console.log("🚨 [ADDRESS PICKER] focusout detectado. Texto actual:", rawText);
+          // Intentar rescatar el texto de 3 formas distintas
+          let rawText = ac.inputValue || realTimeText || "";
           
-          // Si el texto es lo suficientemente largo
+          // Intentar perforar el Shadow DOM si los otros métodos fallan
+          if (!rawText && ac.shadowRoot) {
+              const innerInput = ac.shadowRoot.querySelector('input');
+              if (innerInput) {
+                  rawText = innerInput.value;
+              }
+          }
+
+          console.log("🚨 [ADDRESS PICKER] focusout detectado. Texto rescatado:", rawText);
+          
+          // Si por fin logramos rescatar el texto
           if (rawText.length > 5) {
              console.warn("⚠️ Enviando texto manual por fallback (focusout):", rawText);
              onChange({ direccion_texto: rawText, latitud: 0, longitud: 0 });
