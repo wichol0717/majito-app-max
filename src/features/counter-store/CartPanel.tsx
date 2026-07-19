@@ -36,25 +36,14 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const cuponesDisponibles: Cupon[] = useMemo(() => parseCupones((settings as any).cupones), [settings]);
 
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
-  
-  // 1. Inicializar con el prop 'address' global
-  const [direccion, setDireccion] = useState<AddressValue | null>(address);
-
-  // 2. Mantener sincronizado si el prop cambia desde afuera
-  // Borra este bloque completo:
-useEffect(() => {
-  setDireccion(address);
-}, [address]);
+  const [direccion, setDireccion] = useState<AddressValue | null>(null);
 
   // Evita que el mapa se reinicie solo
   const memoizedAddress = useMemo(() => direccion, [direccion]);
 
-  // 3. Avisar al papá (setAddress) cuando el usuario cambie el pin
   const handleAddressChange = useCallback((val: any) => {
     setDireccion(val);
-    setAddress(val); 
-  }, [setAddress]);
-  
+  }, [setDireccion]);
   const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
 
@@ -70,6 +59,9 @@ useEffect(() => {
   const [cuponInput, setCuponInput] = useState("");
   const [cuponAplicado, setCuponAplicado] = useState<Cupon | null>(null);
   const [cuponMsg, setCuponMsg] = useState<string | null>(null);
+
+  // Suponiendo que viene definido en tu contexto o scope superior
+  const direccionOk = direccion !== null && direccion.direccion_texto.length >= 5;
 
   useEffect(() => {
     const stored = readCupon();
@@ -123,20 +115,18 @@ useEffect(() => {
 
   const hayMostrador = items.some((i) => !i.isGift);
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
-
-  // Definición de validación de dirección
-  const direccionOk = entrega === "tienda" || (!!direccion && typeof direccion.direccion_texto === 'string' && direccion.direccion_texto.length >= 5);
   
-  // Definición de botones
-  const puedeConfirmarWhats = items.length > 0 && direccionOk;
-
+  const puedeConfirmarWhats =
+    items.length > 0 &&
+    direccionOk &&
+    address !== null;
+    
   const puedeConfirmarSpei =
     puedeConfirmarWhats &&
     buyerName.trim().length >= 2 &&
     buyerWhatsapp.trim().length >= 8 &&
     !!comprobanteUrl;
-    !!comprobanteUrl;
-    // --- DIAGNÓSTICO DE BOTÓN SPEI ---
+
   useEffect(() => {
     console.log("--- ESTADO DEL BOTÓN SPEI ---");
     console.log("1. puedeConfirmarWhats:", puedeConfirmarWhats);
@@ -145,9 +135,8 @@ useEffect(() => {
     console.log("4. Comprobante URL existe:", !!comprobanteUrl);
     console.log("--- ¿BOTÓN HABILITADO?:", puedeConfirmarSpei, "---");
   }, [puedeConfirmarWhats, buyerName, buyerWhatsapp, comprobanteUrl, puedeConfirmarSpei]);
-  // --- DIAGNÓSTICO PROFUNDO DE DIRECCIÓN Y ENTREGA ---
 
-useEffect(() => {
+  useEffect(() => {
     console.log("--- DEBUG DE DIRECCIÓN Y ENTREGA ---");
     console.log("1. Items en carrito:", items.length);
     console.log("2. Tipo de entrega:", entrega);
@@ -155,7 +144,8 @@ useEffect(() => {
     console.log("4. ¿Dirección válida (direccionOk)?:", direccionOk);
     console.log("5. ¿Objeto dirección real?:", JSON.stringify(direccion));
   }, [items, entrega, direccionOk, direccion]);
-    const mensajeWhats = useMemo(() => {
+
+  const mensajeWhats = useMemo(() => {
     const lineas: string[] = ["*Nuevo pedido — Majito Cake*", ""];
     if (metodo === "spei") lineas.push(`Referencia: *${referencia}*`, "");
     const regularItems = items.filter((i) => !i.isGift);
@@ -263,6 +253,9 @@ useEffect(() => {
       const regularItems = items.filter((i) => !i.isGift);
       const yaCobradas = new Set<string>();
       let primerId: string | null = null;
+      
+      // Arreglo para acumular los IDs reales de los regalos creados
+      const giftOrderIds: string[] = [];
 
       if (regularItems.length > 0) {
         const envioCostoMostrador =
@@ -294,7 +287,6 @@ useEffect(() => {
       }
 
       for (const g of giftItems) {
-        // --- VALIDACIÓN CRÍTICA ---
         if (!g.product.id) {
              throw new Error("Error: No se pudo identificar el producto del regalo. Intenta de nuevo.");
         }
@@ -307,7 +299,7 @@ useEffect(() => {
         const descRegalo = cuponAplicado ? +(subtRegalo * (cuponAplicado.pct / 100)).toFixed(2) : 0;
         const totalRegalo = Math.max(0, subtRegalo - descRegalo) + envio;
         const payload: any = {
-          product_id: g.product.id, // --- SE AGREGA EL ID ---
+          product_id: g.product.id,
           customer_name: g.giftDetails?.buyerName ?? buyerName.trim(),
           customer_whatsapp: g.giftDetails?.buyerWhatsapp ?? buyerWhatsapp.trim(),
           total_paid: totalRegalo,
@@ -336,6 +328,9 @@ useEffect(() => {
         };
         const { data, error: insErr } = await (supabase.from("gift_orders") as any).insert(payload).select("id").single();
         if (insErr) throw insErr;
+        
+        // Guardamos el UUID asignado por Supabase
+        if (data?.id) giftOrderIds.push(data.id);
         if (!primerId) primerId = data?.id ?? null;
       }
 
@@ -359,6 +354,14 @@ useEffect(() => {
         const extras: string[] = [];
         if (comprobanteUrl) extras.push(` Comprobante SPEI: ${comprobanteUrl}`);
         if (primerId) extras.push(` Semáforo del pedido: ${origin}/pedido/${primerId}`);
+        
+        // --- INYECCIÓN DINÁMICA DE ENLACES A TARJETAS DIGITALES ---
+        if (giftOrderIds.length > 0) {
+          giftOrderIds.forEach((id) => {
+            extras.push(` Vinculo a la tarjeta: ${origin}/regalo/${id}`);
+          });
+        }
+
         const msgFinal = extras.length ? `${mensajeWhats}\n\n${extras.join("\n")}` : mensajeWhats;
         const url = `https://wa.me/${WHATSAPP_NUM}?text=${encodeURIComponent(msgFinal)}`;
         if (waWin && !waWin.closed) {
@@ -538,7 +541,7 @@ useEffect(() => {
           )}
           {showGiftHint && (
             <p className="rounded bg-white/60 p-2 text-[11px] text-mocha">
-              Toca el ícono  sobre cualquier producto del mostrador y llena los datos del destinatario. El mensaje viaja con el pedido por WhatsApp.
+              Toca el ícono sobre cualquier producto del mostrador y llena los datos del destinatario. El mensaje viaja con el pedido por WhatsApp.
             </p>
           )}
           {hayPastel && (
@@ -577,17 +580,17 @@ useEffect(() => {
             <p className="text-mocha">+ ${ENVIO_COSTO}</p>
           </button>
         </div>
-  {entrega === "envio" && (
-  <div className="mt-3">
-    <AddressPicker
-      key="mapa-envio"
-      value={memoizedAddress}
-      onChange={handleAddressChange}
-      label="Dirección exacta *"
-      placeholder="Busca tu calle, colonia o referencia"
-    />
-  </div>
-)}
+        {entrega === "envio" && (
+          <div className="mt-3">
+            <AddressPicker
+              key="mapa-envio"
+              value={memoizedAddress}
+              onChange={handleAddressChange}
+              label="Dirección exacta *"
+              placeholder="Busca tu calle, colonia o referencia"
+            />
+          </div>
+        )}
       </div>
 
       <div className="border-t border-mocha/10 pt-3">
@@ -708,7 +711,7 @@ useEffect(() => {
           </div>
         )}
         {cuponMsg && (
-          <p className={`mt-1 text-[11px] ${cuponAplicado ? "text-green-600" : "text-red-600"}`}>{cuponMsg}</p>
+          <p className="mt-1 text-[11px] text-green-600">{cuponMsg}</p>
         )}
       </div>
 
