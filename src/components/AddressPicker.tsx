@@ -225,6 +225,20 @@ export function AddressPicker({
           processPlace(e.place || ac.value);
         });
 
+        // NUEVO: Escuchar evento change genérico y forzar texto si no hay place
+        ac.addEventListener("change", () => {
+          console.log("🚨 [ADDRESS PICKER] Evento 'change' disparado. Valor actual del input:", ac.value);
+          if (ac.value) {
+            processPlace(ac.value);
+          } else {
+             const rawText = autocompleteContainerRef.current?.querySelector('input')?.value || "";
+             console.warn("⚠️ No hay objeto place, intentando enviar texto crudo:", rawText);
+             if (rawText.length > 5) {
+                 onChange({ direccion_texto: rawText, latitud: 0, longitud: 0 });
+             }
+          }
+        });
+
       } catch (err) {
         console.error("Error al inicializar buscador:", err);
       }
