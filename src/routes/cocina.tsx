@@ -320,7 +320,8 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
                             </Link>
                             <button onClick={() => {
                                     const phone = formatWaNumber(r.recipient_whatsapp || r.customer_whatsapp || r.telefono || "");
-                                    if (phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`¡Hola! Tienes una sorpresa dulce de Majito Cake. Pedido: ${identifier}`)}`, '_blank');
+                                    const link = `${window.location.origin}/regalo/${identifier}`;
+                                    if (phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(`¡Hola! Tienes una sorpresa dulce de Majito Cake. Ábrela aquí: ${link}`)}`, '_blank');
                                 }} className="flex w-full items-center justify-center gap-1 rounded-full bg-green-500 py-2 text-xs font-bold text-white active:scale-[0.98]">
                                 <MessageCircle className="h-3 w-3" /> Enviar
                             </button>
