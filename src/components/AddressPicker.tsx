@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MapPin, CheckCircle2 } from "lucide-react";
 
 /**
  * AddressPicker.tsx
  * Selector de dirección con Google Places Autocomplete (Nueva API) + mapa arrastrable.
  * Devuelve al padre: texto legible, latitud y longitud (coordenadas GPS).
- * Versión completa y expandida con perforación de Shadow DOM.
+ * Versión completa y expandida con perforación de Shadow DOM y Memoización.
  */
 
 export interface AddressValue {
@@ -60,7 +60,8 @@ async function ensureMapsLibraries() {
   ]);
 }
 
-export function AddressPicker({ 
+// Cambiamos 'export function AddressPicker' por una función interna
+function AddressPickerComponent({ 
   value, 
   onChange, 
   label = "Dirección de entrega *", 
@@ -305,6 +306,9 @@ export function AddressPicker({
     </div>
   );
 }
+
+// Exportamos la versión Memoizada para evitar el parpadeo y la pérdida de datos
+export const AddressPicker = React.memo(AddressPickerComponent);
 
 /**
  * BOTÓN DE CHECKOUT
