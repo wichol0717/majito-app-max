@@ -239,6 +239,18 @@ export function AddressPicker({
           }
         });
 
+        // NUEVO ANEXO: Escucha cuando el usuario escribe algo y da clic fuera (pierde el foco)
+        ac.addEventListener("focusout", () => {
+          const rawText = ac.inputValue || autocompleteContainerRef.current?.querySelector('input')?.value || "";
+          console.log("🚨 [ADDRESS PICKER] focusout detectado. Texto actual:", rawText);
+          
+          // Si el texto es lo suficientemente largo
+          if (rawText.length > 5) {
+             console.warn("⚠️ Enviando texto manual por fallback (focusout):", rawText);
+             onChange({ direccion_texto: rawText, latitud: 0, longitud: 0 });
+          }
+        });
+
       } catch (err) {
         console.error("Error al inicializar buscador:", err);
       }
