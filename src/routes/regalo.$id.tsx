@@ -26,6 +26,7 @@ interface Regalo {
   direccion: string | null;
   delivery: string;
   customer_whatsapp?: string;
+  tipo_tarjeta?: string; // <-- Agregado para tipar la tarjeta
 }
 
 function TarjetaRegalo() {
@@ -60,6 +61,7 @@ function TarjetaRegalo() {
           direccion: row.direccion_texto ?? row.recipient_location ?? null,
           delivery: row.delivery_status ?? "validando_pago",
           customer_whatsapp: row.customer_whatsapp ?? "",
+          tipo_tarjeta: row.tipo_tarjeta ?? first.tipo_tarjeta ?? "cumple", // <-- Leemos el tipo de tarjeta dinámico
         });
       }
       setLoading(false);
@@ -90,7 +92,7 @@ function TarjetaRegalo() {
           bakeryWhatsapp="7831450929"
           orderId={r.id}
           paymentReference={r.payment_reference}
-          design="cumple"
+          design={r.tipo_tarjeta ?? "cumple"} // <-- Ahora usa la tarjeta seleccionada dinámicamente
         />
 
         <div className="mt-6 grid gap-3">
