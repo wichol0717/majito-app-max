@@ -7,6 +7,13 @@ import { ProductCard } from "./ProductCard";
 import { GiftModal } from "./GiftModal";
 import { CartPanel } from "./CartPanel";
 
+// --- MEJORA: Definición de tipo para la dirección ---
+export interface AddressValue {
+  direccion_texto: string;
+  latitud: number;
+  longitud: number;
+}
+
 const CATEGORY_ICONS: Record<string, string> = {
   Galletas: "/galletas.svg",
   Cupcakes: "/cupcakes.svg",
@@ -39,6 +46,9 @@ function CounterStoreInner() {
   const [giftProduct, setGiftProduct] = useState<Product | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const { totalItems } = useCart();
+  
+  // --- MEJORA: Estado para sincronizar la dirección en el Checkout ---
+  const [address, setAddress] = useState<AddressValue | null>(null);
 
   useEffect(() => {
     supabase
@@ -150,8 +160,9 @@ function CounterStoreInner() {
         )}
       </div>
 
+      {/* --- MEJORA: Pasamos address y setAddress al CartPanel --- */}
       <div className="hidden md:sticky md:top-4 md:self-start md:block">
-        <CartPanel />
+        <CartPanel address={address} setAddress={setAddress} />
       </div>
 
       {mobileCartOpen && (
@@ -165,7 +176,8 @@ function CounterStoreInner() {
             >
               <X className="h-5 w-5" />
             </button>
-            <CartPanel />
+            {/* --- MEJORA: Pasamos address y setAddress al CartPanel --- */}
+            <CartPanel address={address} setAddress={setAddress} />
           </div>
         </div>
       )}

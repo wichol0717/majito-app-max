@@ -35,13 +35,26 @@ export function GiftModal({ product, onClose }: Props) {
   
   const [qty, setQty] = useState(1);
   const [mensaje, setMensaje] = useState(""); 
-  const [selectedCard, setSelectedCard] = useState(TARJETAS[0]);
+  const [selectedCardId, setSelectedCardId] = useState<string>(TARJETAS[0].id);
 
   const [buyerName, setBuyerName] = useState("");
   const [buyerWhatsapp, setBuyerWhatsapp] = useState("");
   const [recipientName, setRecipientName] = useState("");
   const [recipientWhatsapp, setRecipientWhatsapp] = useState("");
   const [recipientAddress, setRecipientAddress] = useState<AddressValue | null>(null);
+
+  useEffect(() => {
+    if (product) {
+      setQty(1);
+      setMensaje("");
+      setSelectedCardId(TARJETAS[0].id);
+      setBuyerName("");
+      setBuyerWhatsapp("");
+      setRecipientName("");
+      setRecipientWhatsapp("");
+      setRecipientAddress(null);
+    }
+  }, [product]);
 
   const formValido =
     buyerName.trim().length >= 2 &&
@@ -52,7 +65,6 @@ export function GiftModal({ product, onClose }: Props) {
     (recipientAddress.direccion_texto || "").trim().length > 0 &&
     mensaje.trim().length > 0;
 
-  // DIAGNÓSTICO MEJORADO: Imprime cada campo en una línea separada en la consola
   useEffect(() => {
     if (!formValido) {
       console.log("--- DIAGNÓSTICO DE FORMULARIO ---");
@@ -77,6 +89,8 @@ export function GiftModal({ product, onClose }: Props) {
   const confirmar = () => {
     if (!recipientAddress) return;
     
+    const cardObj = TARJETAS.find((t) => t.id === selectedCardId) || TARJETAS[0];
+    
     addGift(product, qty, mensaje, {
       buyerName: buyerName.trim(),
       buyerWhatsapp: buyerWhatsapp.trim(),
@@ -85,18 +99,11 @@ export function GiftModal({ product, onClose }: Props) {
       recipientLocation: recipientAddress.direccion_texto,
       recipientLat: recipientAddress.latitud,
       recipientLng: recipientAddress.longitud,
-      cardId: selectedCard.id,
-      cardImage: selectedCard.img,
+      cardId: cardObj.id,
+      cardImage: cardObj.img,
       dedicatoria: mensaje.trim(), 
     });
     
-    setQty(1);
-    setMensaje("");
-    setBuyerName("");
-    setBuyerWhatsapp("");
-    setRecipientName("");
-    setRecipientWhatsapp("");
-    setRecipientAddress(null);
     onClose();
   };
 
@@ -142,20 +149,25 @@ export function GiftModal({ product, onClose }: Props) {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setSelectedCard(t)}
-                className={`relative flex min-w-[100px] flex-shrink-0 flex-col overflow-hidden rounded-xl border-2 transition-all ${
-                  selectedCard.id === t.id ? "border-shocking" : "border-mocha/20 hover:border-shocking/40"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setSelectedCardId(t.id);
+                }}
+                className={`relative flex min-w-[100px] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border-2 transition-all ${
+                  selectedCardId === t.id ? "border-shocking" : "border-mocha/20 hover:border-shocking/40"
                 }`}
               >
-                <div className="relative h-16 w-full bg-sunset/30">
+                <div className="pointer-events-none relative h-16 w-full bg-sunset/30">
                   <img src={t.img} alt={t.label} className="h-full w-full object-cover" />
-                  {selectedCard.id === t.id && (
+                  {selectedCardId === t.id && (
                     <div className="absolute right-1 top-1 rounded-full bg-shocking p-0.5">
                       <Check className="h-3 w-3 text-white" />
                     </div>
                   )}
                 </div>
-                <div className="bg-white py-1.5 text-center text-[10px] font-medium text-foreground">{t.label}</div>
+                <div className="pointer-events-none bg-white py-1.5 text-center text-[10px] font-medium text-foreground">
+                  {t.label}
+                </div>
               </button>
             ))}
           </div>
@@ -207,7 +219,8 @@ export function GiftModal({ product, onClose }: Props) {
             </div>
             <div>
               <Label htmlFor="recipientWhatsapp" className="text-xs">WhatsApp del festejado *</Label>
-<Input id="recipientWhatsapp" value={recipientWhatsapp} onChange={(e) => setRecipientWhatsapp(e.target.value)} />            </div>
+              <Input id="recipientWhatsapp" value={recipientWhatsapp} onChange={(e) => setRecipientWhatsapp(e.target.value)} />            
+            </div>
           </div>
           <AddressPicker
             value={recipientAddress}
