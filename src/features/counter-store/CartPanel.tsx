@@ -316,7 +316,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
           mensaje: g.giftMessage ?? null,
           recipient_name: g.giftDetails?.recipientName ?? null,
           recipient_whatsapp: g.giftDetails?.recipientWhatsapp ?? null,
-          tipo_tarjeta: g.giftDetails?.cardId ?? null,
+          tipo_tarjeta: g.giftDetails?.cardId ?? "cumple",
           gift_items: [{
             producto: g.product.nombre,
             cantidad: g.quantity,
@@ -324,7 +324,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
             mensaje: g.giftMessage,
             para: g.giftDetails?.recipientName,
             wa_festejado: g.giftDetails?.recipientWhatsapp,
-            tipo_tarjeta: g.giftDetails?.cardId ?? null,
+            tipo_tarjeta: g.giftDetails?.cardId ?? "cumple",
           }],
         };
         const { data, error: insErr } = await (supabase.from("gift_orders") as any).insert(payload).select("id").single();
