@@ -55,7 +55,6 @@ export function DigitalCard({
   };
 
   const iniciarSorpresa = () => {
-    // El audio arranca automáticamente al presionar el botón de abrir
     if (audioRef.current) {
       audioRef.current.volume = 0.6;
       audioRef.current.play().then(() => {
@@ -101,7 +100,7 @@ export function DigitalCard({
     <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl border border-mocha/10 relative">
       <audio 
         ref={audioRef} 
-        src="https://actions.google.com/sounds/v1/ambiences/music_box_playing.ogg" 
+        src="/musica/majito-regalo.mp3" 
         preload="auto"
         loop 
       />
