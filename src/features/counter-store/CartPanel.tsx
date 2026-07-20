@@ -317,6 +317,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
           mensaje: g.giftMessage ?? null,
           recipient_name: g.giftDetails?.recipientName ?? null,
           recipient_whatsapp: g.giftDetails?.recipientWhatsapp ?? null,
+          tipo_tarjeta: g.giftDetails?.cardId ?? null,
           gift_items: [{
             producto: g.product.nombre,
             cantidad: g.quantity,
