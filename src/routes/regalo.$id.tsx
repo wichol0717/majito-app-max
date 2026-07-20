@@ -26,7 +26,7 @@ interface Regalo {
   direccion: string | null;
   delivery: string;
   customer_whatsapp?: string;
-  tipo_tarjeta?: string; // <-- Agregado para tipar la tarjeta
+  tipo_tarjeta?: string;
 }
 
 function TarjetaRegalo() {
@@ -61,7 +61,7 @@ function TarjetaRegalo() {
           direccion: row.direccion_texto ?? row.recipient_location ?? null,
           delivery: row.delivery_status ?? "validando_pago",
           customer_whatsapp: row.customer_whatsapp ?? "",
-          tipo_tarjeta: row.tipo_tarjeta ?? first.tipo_tarjeta ?? "cumple", // <-- Leemos el tipo de tarjeta dinámico
+          tipo_tarjeta: row.tipo_tarjeta ?? first.tipo_tarjeta ?? "cumple",
         });
       }
       setLoading(false);
@@ -80,6 +80,9 @@ function TarjetaRegalo() {
     );
   }
 
+  // Limpia y asegura que el diseño sea una minúscula válida para las imágenes en public/tarjetas/
+  const cardDesign = (r.tipo_tarjeta || "cumple").toLowerCase().trim();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-sweet-pink/40 via-crema to-sunset/40 px-4 py-10">
       <div className="mx-auto max-w-md">
@@ -92,7 +95,7 @@ function TarjetaRegalo() {
           bakeryWhatsapp="7831450929"
           orderId={r.id}
           paymentReference={r.payment_reference}
-          design={r.tipo_tarjeta ?? "cumple"} // <-- Ahora usa la tarjeta seleccionada dinámicamente
+          design={cardDesign}
         />
 
         <div className="mt-6 grid gap-3">
