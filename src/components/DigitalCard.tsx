@@ -26,14 +26,24 @@ export function DigitalCard({
   const [revealed, setRevealed] = useState(false);
 
   const getCardImage = (designId: string) => {
+    // Normalizamos y eliminamos espacios internos para atrapar "te amo", "teamo", etc.
+    const cleanDesign = (designId || "cumple").toLowerCase().trim().replace(/\s+/g, "");
+
     const map: Record<string, string> = {
       cumple: "/tarjetas/cumple.jpg",
       boda: "/tarjetas/boda.jpg",
+      amor: "/tarjetas/amor.jpg",
       teamo: "/tarjetas/amor.jpg",
       especial: "/tarjetas/especial.jpg",
       aniversario: "/tarjetas/aniversario.jpg",
     };
-    return map[designId] || "/tarjetas/cumple.jpg";
+
+    // Validación extra por si llega con variantes de texto
+    if (cleanDesign === "teamo" || cleanDesign === "amo") {
+      return "/tarjetas/amor.jpg";
+    }
+
+    return map[cleanDesign] || "/tarjetas/cumple.jpg";
   };
 
   const formatWaNumber = (phone: string) => {
@@ -70,7 +80,6 @@ export function DigitalCard({
     setRevealed(true);
   };
 
-  // Lógica forzada: si existe paymentReference, usamos ese, si no, orderId
   const idFinal = paymentReference || orderId;
 
   const msgAgradecimiento = encodeURIComponent(`Hola ${senderName}, ¡muchas gracias por el regalo! Me encantó.`);
