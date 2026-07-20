@@ -117,9 +117,8 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
   
   const puedeConfirmarWhats =
-    items.length > 0 &&
-    direccionOk &&
-    address !== null;
+  items.length > 0 &&
+  (entrega === "tienda" || direccionOk);
     
   const puedeConfirmarSpei =
     puedeConfirmarWhats &&
