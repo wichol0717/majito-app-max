@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import confetti from "canvas-confetti";
-import { Gift } from "lucide-react";
+import { Gift, Volume2, VolumeX } from "lucide-react";
 
 interface DigitalCardProps {
   recipientName: string;
@@ -24,9 +24,11 @@ export function DigitalCard({
   design,
 }: DigitalCardProps) {
   const [revealed, setRevealed] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const getCardImage = (designId: string) => {
-    // Normalizamos y eliminamos espacios internos para atrapar "te amo", "teamo", etc.
     const cleanDesign = (designId || "cumple").toLowerCase().trim().replace(/\s+/g, "");
 
     const map: Record<string, string> = {
@@ -38,7 +40,6 @@ export function DigitalCard({
       aniversario: "/tarjetas/aniversario.jpg",
     };
 
-    // Validación extra por si llega con variantes de texto
     if (cleanDesign === "teamo" || cleanDesign === "amo") {
       return "/tarjetas/amor.jpg";
     }
@@ -54,14 +55,14 @@ export function DigitalCard({
   };
 
   const iniciarSorpresa = () => {
-    try {
-      const audio = new Audio('https://actions.google.com/sounds/v1/foley/fireworks_explosion_large.ogg');
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(error => console.log("Audio omitido:", error));
-      }
-    } catch (e) {
-      console.log("Audio no soportado:", e);
+    // Reproduce la música automáticamente al abrir la sorpresa
+    if (audioRef.current) {
+      audioRef.current.volume = 0.6;
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+      }).catch(error => {
+        console.log("Reproducción automática prevenida:", error);
+      });
     }
 
     const duration = 3 * 1000;
@@ -80,13 +81,32 @@ export function DigitalCard({
     setRevealed(true);
   };
 
+  const toggleAudio = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
   const idFinal = paymentReference || orderId;
 
   const msgAgradecimiento = encodeURIComponent(`Hola ${senderName}, ¡muchas gracias por el regalo! Me encantó.`);
   const msgConfirmacion = encodeURIComponent(`Hola Majito Cake, confirmo que recibí el regalo del pedido #${idFinal}. ¡Muchas gracias!`);
 
   return (
-    <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl border border-mocha/10">
+    <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl border border-mocha/10 relative">
+      {/* Elemento de audio con la pista de fondo (puedes cambiar la URL por tu archivo local en public/) */}
+      <audio 
+        ref={audioRef} 
+        src="https://actions.google.com/sounds/v1/ambiences/music_box_playing.ogg" 
+        preload="auto"
+        loop 
+      />
+
       {!revealed ? (
         <div className="p-12 flex flex-col items-center justify-center h-[500px] text-center">
           <Gift className="w-16 h-16 text-shocking mb-4" />
@@ -99,7 +119,15 @@ export function DigitalCard({
           </button>
         </div>
       ) : (
-        <div className="animate-in fade-in duration-700">
+        <div className="animate-in fade-in duration-700 relative">
+          <button 
+            onClick={toggleAudio}
+            className="absolute top-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-white/80 backdrop-blur-md px-3 py-1.5 text-xs font-bold text-mocha shadow-md hover:bg-white transition"
+          >
+            {isPlaying ? <Volume2 className="w-4 h-4 text-shocking animate-pulse" /> : <VolumeX className="w-4 h-4" />}
+            {isPlaying ? "Música ON" : "Silenciado"}
+          </button>
+
           <img src={getCardImage(design)} alt="Tarjeta Regalo" className="w-full h-auto object-cover" />
           <div className="p-6 text-center">
             <div className="mb-6 rounded-2xl bg-crema p-5 shadow-inner border border-mocha/10">
