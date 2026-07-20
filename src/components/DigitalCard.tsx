@@ -55,13 +55,13 @@ export function DigitalCard({
   };
 
   const iniciarSorpresa = () => {
-    // Reproduce la música automáticamente al abrir la sorpresa
+    // El audio arranca automáticamente al presionar el botón de abrir
     if (audioRef.current) {
       audioRef.current.volume = 0.6;
       audioRef.current.play().then(() => {
         setIsPlaying(true);
       }).catch(error => {
-        console.log("Reproducción automática prevenida:", error);
+        console.log("Audio bloqueado por políticas del navegador:", error);
       });
     }
 
@@ -99,7 +99,6 @@ export function DigitalCard({
 
   return (
     <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl border border-mocha/10 relative">
-      {/* Elemento de audio con la pista de fondo (puedes cambiar la URL por tu archivo local en public/) */}
       <audio 
         ref={audioRef} 
         src="https://actions.google.com/sounds/v1/ambiences/music_box_playing.ogg" 
