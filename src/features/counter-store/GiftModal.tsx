@@ -90,6 +90,7 @@ export function GiftModal({ product, onClose }: Props) {
     if (!recipientAddress) return;
     
     const cardObj = TARJETAS.find((t) => t.id === selectedCardId) || TARJETAS[0];
+    console.log("--- CONFIRMANDO REGALO CON TARJETA ---", cardObj.id);
     
     addGift(product, qty, mensaje, {
       buyerName: buyerName.trim(),
@@ -149,20 +150,23 @@ export function GiftModal({ product, onClose }: Props) {
               <button
                 key={t.id}
                 type="button"
-                onClick={() => setSelectedCardId(t.id)}
+                onClick={() => {
+                  console.log("Tarjeta seleccionada:", t.id);
+                  setSelectedCardId(t.id);
+                }}
                 className={`relative flex min-w-[100px] flex-shrink-0 cursor-pointer flex-col overflow-hidden rounded-xl border-2 transition-all ${
-                  selectedCardId === t.id ? "border-shocking" : "border-mocha/20 hover:border-shocking/40"
+                  selectedCardId === t.id ? "border-shocking ring-2 ring-shocking" : "border-mocha/20 hover:border-shocking/40"
                 }`}
               >
-                <div className="relative h-16 w-full bg-sunset/30">
+                <div className="pointer-events-none relative h-16 w-full bg-sunset/30">
                   <img src={t.img} alt={t.label} className="h-full w-full object-cover" />
                   {selectedCardId === t.id && (
-                    <div className="absolute right-1 top-1 rounded-full bg-shocking p-0.5">
+                    <div className="absolute right-1 top-1 rounded-full bg-shocking p-0.5 z-10">
                       <Check className="h-3 w-3 text-white" />
                     </div>
                   )}
                 </div>
-                <div className="bg-white py-1.5 text-center text-[10px] font-medium text-foreground">
+                <div className="pointer-events-none bg-white py-1.5 text-center text-[10px] font-medium text-foreground">
                   {t.label}
                 </div>
               </button>
