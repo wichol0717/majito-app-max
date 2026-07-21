@@ -7,6 +7,11 @@ export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' })
   const { settings } = useAppSettings();
   const videoRef = useRef(null);
 
+  // Extracción segura por si la compra envía un objeto en lugar de texto
+  const nombreTarjeta = typeof tarjeta === 'object' && tarjeta !== null 
+    ? (tarjeta.tipo || tarjeta.nombre || tarjeta.categoria || 'cumple') 
+    : (tarjeta || 'cumple');
+
   const iniciarSorpresa = () => {
     // Audio de fuegos artificiales independiente al hacer clic en el botón
     const audio = new Audio('https://actions.google.com/sounds/v1/foley/fireworks_explosion_large.ogg');
@@ -51,7 +56,7 @@ export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' })
           <div>
             <video
               ref={videoRef}
-              src={`/videos/${tarjeta}.mp4`}
+              src={`/videos/${String(nombreTarjeta).toLowerCase().trim()}.mp4`}
               autoPlay
               loop
               muted
