@@ -15,6 +15,16 @@ function generarReferencia() {
   return `MAJITO-${s}`;
 }
 
+// Función auxiliar para extraer el texto del tamaño sin romper React si es un objeto
+function getTamanoNombre(tam: any): string {
+  if (!tam) return "";
+  if (typeof tam === "string") return tam;
+  if (typeof tam === "object" && tam !== null) {
+    return tam.nombre || tam.label || tam.size || "";
+  }
+  return String(tam);
+}
+
 interface CartPanelProps {
   address: AddressValue | null;
   setAddress: (v: AddressValue | null) => void;
@@ -39,7 +49,6 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const [entrega, setEntrega] = useState<"tienda" | "envio">("tienda");
   const [direccion, setDireccion] = useState<AddressValue | null>(null);
 
-  // Evita que el mapa se reinicie solo
   const memoizedAddress = useMemo(() => direccion, [direccion]);
 
   const handleAddressChange = useCallback((val: any) => {
@@ -126,24 +135,6 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
     buyerWhatsapp.trim().length >= 8 &&
     !!comprobanteUrl;
 
-  useEffect(() => {
-    console.log("--- ESTADO DEL BOTÓN SPEI ---");
-    console.log("1. puedeConfirmarWhats:", puedeConfirmarWhats);
-    console.log("2. Nombre (>=2):", buyerName.trim().length >= 2);
-    console.log("3. WhatsApp (>=8):", buyerWhatsapp.trim().length >= 8);
-    console.log("4. Comprobante URL existe:", !!comprobanteUrl);
-    console.log("--- ¿BOTÓN HABILITADO?:", puedeConfirmarSpei, "---");
-  }, [puedeConfirmarWhats, buyerName, buyerWhatsapp, comprobanteUrl, puedeConfirmarSpei]);
-
-  useEffect(() => {
-    console.log("--- DEBUG DE DIRECCIÓN Y ENTREGA ---");
-    console.log("1. Items en carrito:", items.length);
-    console.log("2. Tipo de entrega:", entrega);
-    console.log("3. ¿Hay productos que requieren dirección?:", items.some((i) => !i.isGift));
-    console.log("4. ¿Dirección válida (direccionOk)?:", direccionOk);
-    console.log("5. ¿Objeto dirección real?:", JSON.stringify(direccion));
-  }, [items, entrega, direccionOk, direccion]);
-
   const mensajeWhats = useMemo(() => {
     const lineas: string[] = ["*Nuevo pedido — Majito Cake*", ""];
     if (metodo === "spei") lineas.push(`Referencia: *${referencia}*`, "");
@@ -154,7 +145,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
       lineas.push("* Compra de mostrador:*");
       regularItems.forEach((i) => {
         const sub = i.quantity * Number(i.product.precio);
-        const tamano = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+        const tamano = getTamanoNombre((i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano);
         const tamanoStr = tamano ? ` (${tamano})` : "";
         lineas.push(`• ${i.quantity}× ${i.product.nombre}${tamanoStr} — $${sub.toFixed(2)}`);
         if (i.cakeMessage && i.cakeMessage.trim()) {
@@ -179,7 +170,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
       giftItems.forEach((i, idx) => {
         const sub = i.quantity * Number(i.product.precio);
         const g = i.giftDetails;
-        const tamano = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+        const tamano = getTamanoNombre((i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano);
         const tamanoStr = tamano ? ` (${tamano})` : "";
         lineas.push(`— Regalo #${idx + 1}: ${i.quantity}× ${i.product.nombre}${tamanoStr} — $${sub.toFixed(2)}`);
         if (i.giftMessage) lineas.push(`    Mensaje: "${i.giftMessage}"`);
@@ -282,7 +273,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
           latitud: entrega === "envio" && direccion ? direccion.latitud : null,
           longitud: entrega === "envio" && direccion ? direccion.longitud : null,
           notas: regularItems.map((i) => {
-            const tamano = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+            const tamano = getTamanoNombre((i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano);
             const tamanoStr = tamano ? ` (${tamano})` : "";
             return `${i.quantity}× ${i.product.nombre}${tamanoStr}${i.cakeMessage ? ` [msg: ${i.cakeMessage}]` : ""}`;
           }).join(" | "),
@@ -430,7 +421,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
             .reduce((s, x) => s + x.quantity, 0);
           const noMasStock = totalEnCarritoProducto >= i.product.stock;
           const esPastel = (i.product.categoria ?? "").toLowerCase() === "pasteles" && !i.isGift;
-          const tamanoSeleccionado = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+          const tamanoSeleccionado = getTamanoNombre((i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano);
 
           return (
             <li key={i.key} className="flex gap-3 py-3">
@@ -450,7 +441,7 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
                   <div>
                     <p className="text-sm font-semibold text-foreground">{i.product.nombre}</p>
 
-                    {/* MUESTRA DEL TAMAÑO SELECCIONADO SI EXISTE */}
+                    {/* MUESTRA DEL TAMAÑO SELECCIONADO SI EXISTE (SOLO TEXTO) */}
                     {tamanoSeleccionado && (
                       <p className="text-xs font-medium text-mocha">
                         Tamaño: <span className="font-semibold text-foreground">{tamanoSeleccionado}</span>
