@@ -2,11 +2,12 @@ import { useState } from 'react';
 import confetti from 'canvas-confetti';
 import { useAppSettings } from "@/hooks/useAppSettings";
 
-export default function TarjetaRegalo({ telefonoComprador }) {
+export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' }) {
   const [mostrar, setMostrar] = useState(false);
   const { settings } = useAppSettings();
 
   const iniciarSorpresa = () => {
+    // Audio de fuegos artificiales independiente al hacer clic en el botón
     const audio = new Audio('https://actions.google.com/sounds/v1/foley/fireworks_explosion_large.ogg');
     audio.play().catch(e => console.log("Audio bloqueado por navegador", e));
 
@@ -38,7 +39,14 @@ export default function TarjetaRegalo({ telefonoComprador }) {
           </div>
         ) : (
           <div>
-            <img src="/tarjetas/cumple.jpeg" alt="Tarjeta Regalo" className="w-full h-auto object-cover" />
+            <video
+              src={`/videos/${tarjeta}.mp4`}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="w-full h-auto object-cover"
+            />
             <div className="p-6 text-center">
               <div className="mb-6 rounded-2xl bg-[#fef3c7] p-5 shadow-inner border border-[#78350f]/10">
                 <p className="text-2xl">❤️</p>
