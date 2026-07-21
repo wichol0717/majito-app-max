@@ -1,5 +1,12 @@
+import { useState } from "react";
 import { Gift, Minus, Plus } from "lucide-react";
 import { useCart, type Product } from "./CartContext";
+
+export interface CakeSize {
+  nombre: "Individual" | "Mediano" | "Grande";
+  precio: number;
+  porciones?: string;
+}
 
 interface Props {
   product: Product;
@@ -8,16 +15,54 @@ interface Props {
 
 export function ProductCard({ product, onGiftClick }: Props) {
   const { quantityOf, addToCart, items, increment, decrement } = useCart();
+
+  // Determinamos si el producto pertenece a la categoría Pasteles
+  const isPastel = product.categoria === "Pasteles";
+
+  // Lista de tamaños con sus valores configurados o por defecto
+  const tamaniosList: CakeSize[] =
+    (product as any).tamanios && (product as any).tamanios.length > 0
+      ? (product as any).tamanios
+      : [
+          { nombre: "Individual", precio: Number(product.precio) || 150, porciones: "Pequeño" },
+          { nombre: "Mediano", precio: 350, porciones: "6 a 8 personas" },
+          { nombre: "Grande", precio: 600, porciones: "15 a 20 personas" },
+        ];
+
+  // Estado del tamaño seleccionado (por defecto Individual si es pastel)
+  const [selectedSize, setSelectedSize] = useState<CakeSize | undefined>(
+    isPastel ? tamaniosList[0] : undefined
+  );
+
   const enCarrito = quantityOf(product.id);
   const canPlus = enCarrito < product.stock;
 
-  const nonGiftLine = items.find((i) => i.product.id === product.id && !i.isGift);
+  // Busca el ítem en el carrito respetando el tamaño en caso de ser pastel
+  const nonGiftLine = items.find(
+    (i: any) =>
+      i.product.id === product.id &&
+      !i.isGift &&
+      (!isPastel || i.selectedSize?.nombre === selectedSize?.nombre || i.product?.selectedSize?.nombre === selectedSize?.nombre)
+  );
+
+  // Precio dinámico a mostrar según el tamaño elegido
+  const currentPrice = isPastel && selectedSize ? selectedSize.precio : product.precio;
 
   const handlePlus = () => {
     if (!canPlus) return;
-    if (nonGiftLine) increment(nonGiftLine.key);
-    else addToCart(product, 1);
+    if (nonGiftLine) {
+      increment(nonGiftLine.key);
+    } else {
+      // Pasamos el producto junto con el precio y tamaño ajustados como un solo objeto
+      const productToAdd = {
+        ...product,
+        precio: currentPrice,
+        selectedSize,
+      };
+      addToCart(productToAdd as any, 1);
+    }
   };
+
   const handleMinus = () => {
     if (nonGiftLine) decrement(nonGiftLine.key);
   };
@@ -28,7 +73,7 @@ export function ProductCard({ product, onGiftClick }: Props) {
         <button
           type="button"
           onClick={() => onGiftClick(product)}
-          aria-label={`Regalar ${product.nombre}`}
+          aria-label={`Regalar ${product.nombre ?? "producto"}`}
           className="absolute left-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-sweet-pink text-white shadow-lg transition hover:scale-110 hover:bg-shocking"
         >
           <Gift className="h-4 w-4" />
@@ -41,7 +86,7 @@ export function ProductCard({ product, onGiftClick }: Props) {
         {product.img ? (
           <img
             src={product.img}
-            alt={product.nombre}
+            alt={product.nombre ?? "Imagen del producto"}
             loading="lazy"
             className="h-44 w-full object-cover"
             onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
@@ -58,8 +103,42 @@ export function ProductCard({ product, onGiftClick }: Props) {
         {product.descripcion && (
           <p className="mt-1 line-clamp-2 text-sm text-foreground/70">{product.descripcion}</p>
         )}
+
+        {/* SELECTOR DE TAMAÑOS (Únicamente para la categoría Pasteles) */}
+        {isPastel && (
+          <div className="mt-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-mocha">
+              Selecciona tamaño:
+            </span>
+            <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+              {tamaniosList.map((t) => {
+                const isSelected = selectedSize?.nombre === t.nombre;
+                return (
+                  <button
+                    key={t.nombre}
+                    type="button"
+                    onClick={() => setSelectedSize(t)}
+                    className={`flex flex-col items-center justify-center rounded-xl p-1.5 text-xs transition border ${
+                      isSelected
+                        ? "bg-shocking text-white border-shocking shadow-sm"
+                        : "bg-sunset/40 text-mocha border-mocha/10 hover:border-shocking/50"
+                    }`}
+                  >
+                    <span className="font-bold">{t.nombre}</span>
+                    {t.porciones && (
+                      <span className={`text-[9px] ${isSelected ? "text-white/80" : "text-mocha/70"}`}>
+                        {t.porciones}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <p className="mt-2 text-2xl font-bold text-shocking">
-          ${Number(product.precio).toFixed(2)}
+          ${Number(currentPrice).toFixed(2)}
         </p>
         <p className="text-[11px] text-mocha">Stock: {product.stock}</p>
 

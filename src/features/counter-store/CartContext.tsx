@@ -3,6 +3,12 @@ import type { Database } from "@/api/database.types";
 
 export type Product = Database["public"]["Tables"]["products"]["Row"];
 
+export interface CakeSize {
+  nombre: "Individual" | "Mediano" | "Grande";
+  precio: number;
+  porciones?: string;
+}
+
 export interface CartItem {
   key: string;
   product: Product;
@@ -11,6 +17,7 @@ export interface CartItem {
   giftMessage?: string;
   giftDetails?: GiftDetails;
   cakeMessage?: string;
+  selectedSize?: CakeSize;
 }
 
 export interface GiftDetails {
@@ -66,27 +73,45 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = useCallback((p: Product, qty = 1) => {
     setItems((prev) => {
+      const sizeFromProduct = (p as any).selectedSize as CakeSize | undefined;
       const currentSameProduct = prev
         .filter((i) => i.product.id === p.id)
         .reduce((s, i) => s + i.quantity, 0);
       const room = Math.max(0, p.stock - currentSameProduct);
       const add = Math.min(qty, room);
       if (add <= 0) return prev;
-      const existing = prev.find((i) => i.product.id === p.id && !i.isGift);
+
+      // Agrupa de forma separada si el producto tiene un tamaño de pastel distinto
+      const existing = prev.find(
+        (i) =>
+          i.product.id === p.id &&
+          !i.isGift &&
+          ((i.selectedSize?.nombre === sizeFromProduct?.nombre) ||
+            (!i.selectedSize && !sizeFromProduct))
+      );
+
       if (existing) {
         return prev.map((i) =>
           i.key === existing.key ? { ...i, quantity: i.quantity + add } : i,
         );
       }
+
       return [
         ...prev,
-        { key: `p-${p.id}-${Date.now()}`, product: p, quantity: add, isGift: false },
+        {
+          key: `p-${p.id}-${sizeFromProduct?.nombre ?? "std"}-${Date.now()}`,
+          product: p,
+          quantity: add,
+          isGift: false,
+          selectedSize: sizeFromProduct,
+        },
       ];
     });
   }, []);
 
   const addGift = useCallback((p: Product, qty: number, message: string, details: GiftDetails) => {
     setItems((prev) => {
+      const sizeFromProduct = (p as any).selectedSize as CakeSize | undefined;
       const currentSameProduct = prev
         .filter((i) => i.product.id === p.id)
         .reduce((s, i) => s + i.quantity, 0);
@@ -102,6 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           isGift: true,
           giftMessage: message,
           giftDetails: details,
+          selectedSize: sizeFromProduct,
         },
       ];
     });
@@ -139,7 +165,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartCtx>(() => {
     const totalItems = items.reduce((s, i) => s + i.quantity, 0);
-    const subtotal = items.reduce((s, i) => s + i.quantity * Number(i.product.precio), 0);
+    const subtotal = items.reduce((s, i) => {
+      const itemPrice = Number(i.selectedSize?.precio ?? i.product.precio);
+      return s + i.quantity * itemPrice;
+    }, 0);
     const hasAnyGift = items.some((i) => i.isGift);
     const quantityOf = (productId: number) =>
       items.filter((i) => i.product.id === productId).reduce((s, i) => s + i.quantity, 0);

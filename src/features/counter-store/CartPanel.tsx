@@ -14,6 +14,7 @@ function generarReferencia() {
   for (let i = 0; i < 4; i++) s += abc[Math.floor(Math.random() * abc.length)];
   return `MAJITO-${s}`;
 }
+
 interface CartPanelProps {
   address: AddressValue | null;
   setAddress: (v: AddressValue | null) => void;
@@ -60,7 +61,6 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const [cuponAplicado, setCuponAplicado] = useState<Cupon | null>(null);
   const [cuponMsg, setCuponMsg] = useState<string | null>(null);
 
-  // Suponiendo que viene definido en tu contexto o scope superior
   const direccionOk = direccion !== null && direccion.direccion_texto.length >= 5;
 
   useEffect(() => {
@@ -117,8 +117,8 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
   const hayPastel = items.some((i) => (i.product.categoria ?? "").toLowerCase() === "pasteles");
   
   const puedeConfirmarWhats =
-  items.length > 0 &&
-  (entrega === "tienda" || direccionOk);
+    items.length > 0 &&
+    (entrega === "tienda" || direccionOk);
     
   const puedeConfirmarSpei =
     puedeConfirmarWhats &&
@@ -154,7 +154,9 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
       lineas.push("* Compra de mostrador:*");
       regularItems.forEach((i) => {
         const sub = i.quantity * Number(i.product.precio);
-        lineas.push(`• ${i.quantity}× ${i.product.nombre} — $${sub.toFixed(2)}`);
+        const tamano = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+        const tamanoStr = tamano ? ` (${tamano})` : "";
+        lineas.push(`• ${i.quantity}× ${i.product.nombre}${tamanoStr} — $${sub.toFixed(2)}`);
         if (i.cakeMessage && i.cakeMessage.trim()) {
           lineas.push(`    Mensaje en pastel: "${i.cakeMessage.trim()}"`);
         }
@@ -177,7 +179,9 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
       giftItems.forEach((i, idx) => {
         const sub = i.quantity * Number(i.product.precio);
         const g = i.giftDetails;
-        lineas.push(`— Regalo #${idx + 1}: ${i.quantity}× ${i.product.nombre} — $${sub.toFixed(2)}`);
+        const tamano = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+        const tamanoStr = tamano ? ` (${tamano})` : "";
+        lineas.push(`— Regalo #${idx + 1}: ${i.quantity}× ${i.product.nombre}${tamanoStr} — $${sub.toFixed(2)}`);
         if (i.giftMessage) lineas.push(`    Mensaje: "${i.giftMessage}"`);
         if (g) {
           lineas.push(`    De: ${g.buyerName} (WA: ${g.buyerWhatsapp})`);
@@ -253,7 +257,6 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
       const yaCobradas = new Set<string>();
       let primerId: string | null = null;
       
-      // Arreglo para acumular los IDs reales de los regalos creados
       const giftOrderIds: string[] = [];
 
       if (regularItems.length > 0) {
@@ -278,7 +281,11 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
           direccion_texto: entrega === "envio" && direccion ? direccion.direccion_texto : null,
           latitud: entrega === "envio" && direccion ? direccion.latitud : null,
           longitud: entrega === "envio" && direccion ? direccion.longitud : null,
-          notas: regularItems.map((i) => `${i.quantity}× ${i.product.nombre}${i.cakeMessage ? ` [msg: ${i.cakeMessage}]` : ""}`).join(" | "),
+          notas: regularItems.map((i) => {
+            const tamano = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+            const tamanoStr = tamano ? ` (${tamano})` : "";
+            return `${i.quantity}× ${i.product.nombre}${tamanoStr}${i.cakeMessage ? ` [msg: ${i.cakeMessage}]` : ""}`;
+          }).join(" | "),
         };
         const { data, error: insErr } = await (supabase.from("counter_orders") as any).insert(payload).select("id").single();
         if (insErr) throw insErr;
@@ -330,7 +337,6 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
         const { data, error: insErr } = await (supabase.from("gift_orders") as any).insert(payload).select("id").single();
         if (insErr) throw insErr;
         
-        // Guardamos el UUID asignado por Supabase
         if (data?.id) giftOrderIds.push(data.id);
         if (!primerId) primerId = data?.id ?? null;
       }
@@ -356,7 +362,6 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
         if (comprobanteUrl) extras.push(` Comprobante SPEI: ${comprobanteUrl}`);
         if (primerId) extras.push(` Semáforo del pedido: ${origin}/pedido/${primerId}`);
         
-        // --- INYECCIÓN DINÁMICA DE ENLACES A TARJETAS DIGITALES ---
         if (giftOrderIds.length > 0) {
           giftOrderIds.forEach((id) => {
             extras.push(` Vinculo a la tarjeta: ${origin}/regalo/${id}`);
@@ -425,6 +430,8 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
             .reduce((s, x) => s + x.quantity, 0);
           const noMasStock = totalEnCarritoProducto >= i.product.stock;
           const esPastel = (i.product.categoria ?? "").toLowerCase() === "pasteles" && !i.isGift;
+          const tamanoSeleccionado = (i as any).selectedSize || (i as any).size || (i as any).tamano || (i.product as any).tamano;
+
           return (
             <li key={i.key} className="flex gap-3 py-3">
               {i.product.img ? (
@@ -442,6 +449,14 @@ export function CartPanel({ address, setAddress }: CartPanelProps) {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold text-foreground">{i.product.nombre}</p>
+
+                    {/* MUESTRA DEL TAMAÑO SELECCIONADO SI EXISTE */}
+                    {tamanoSeleccionado && (
+                      <p className="text-xs font-medium text-mocha">
+                        Tamaño: <span className="font-semibold text-foreground">{tamanoSeleccionado}</span>
+                      </p>
+                    )}
+
                     {i.isGift && (
                       <div className="mt-0.5 space-y-0.5 text-[11px] text-sweet-pink">
                         <p className="flex items-center gap-1 font-semibold">

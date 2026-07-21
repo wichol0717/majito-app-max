@@ -402,6 +402,7 @@ export type Database = {
           nombre: string
           precio: number
           stock: number
+          tamanios: Json | null
           updated_at: string
         }
         Insert: {
@@ -414,6 +415,7 @@ export type Database = {
           nombre: string
           precio: number
           stock?: number
+          tamanios?: Json | null
           updated_at?: string
         }
         Update: {
@@ -426,6 +428,7 @@ export type Database = {
           nombre?: string
           precio?: number
           stock?: number
+          tamanios?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -596,3 +599,31 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
+// ==========================================
+// Extensiones y Tipos Personalizados Frontend
+// ==========================================
+
+export interface CakeSize {
+  nombre: "Individual" | "Mediano" | "Grande";
+  precio: number;
+  porciones?: string;
+}
+
+export interface Product {
+  id: number;
+  nombre: string;
+  descripcion?: string | null;
+  img?: string | null;
+  categoria?: string | null;
+  precio: number;
+  stock?: number;
+  activo?: string;
+  tamanios?: CakeSize[] | null;
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+  selectedSize?: CakeSize;
+}
