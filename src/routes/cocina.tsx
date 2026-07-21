@@ -266,15 +266,47 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
                         </div>
                       ) : (
                         <>
-                           {r.items && Array.isArray(r.items) && (
+                          {/* ÍTEMS DE PEDIDOS NORMALES / MOSTRADOR */}
+                          {r.items && Array.isArray(r.items) && r.items.length > 0 && (
                             <ul className="mt-2 space-y-0.5 text-[11px] text-mocha">
                               {r.items.slice(0, 6).map((it: any, i: number) => (
                                 <li key={i}>• {it.qty ?? it.cantidad ?? 1}× {it.nombre ?? it.name ?? it.title ?? "producto"}</li>
                               ))}
                             </ul>
                           )}
+
+                          {/* ÍTEMS DE PEDIDOS DE REGALO (gift_items) */}
+                          {r.gift_items && Array.isArray(r.gift_items) && r.gift_items.length > 0 && (
+                            <ul className="mt-2 space-y-0.5 text-[11px] font-semibold text-shocking">
+                              {r.gift_items.map((it: any, i: number) => (
+                                <li key={i}>
+                                  • {it.cantidad ?? 1}× {it.producto ?? "Producto de regalo"}
+                                  {it.mensaje ? ` [Msg: "${it.mensaje}"]` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {/* FALLBACK SI ES REGALO INDIVIDUAL CON 'producto' */}
+                          {!r.items?.length && !r.gift_items?.length && r.producto && (
+                            <p className="mt-2 text-[11px] font-semibold text-shocking">
+                              • {r.cantidad ?? 1}× {r.producto}
+                            </p>
+                          )}
+
                           {r.notas && <p className="mt-2 rounded bg-white px-2 py-1 text-[11px] italic text-mocha">📝 {r.notas}</p>}
                           {r.dedicatoria && <p className="mt-2 rounded bg-pink-50 px-2 py-1 text-[11px] italic text-rose-600">💌 {r.dedicatoria}</p>}
+
+                          {/* DETALLES Y DESTINATARIO DEL REGALO */}
+                          {r.tabla === "gift_orders" && (r.recipient_name || r.mensaje) && (
+                            <div className="mt-2 rounded border border-pink-200 bg-pink-50/80 p-2 text-[11px] text-shocking">
+                              <p className="font-bold flex items-center gap-1">
+                                <Gift className="h-3 w-3" /> Datos del Destinatario:
+                              </p>
+                              {r.recipient_name && <p className="text-mocha">Para: <strong className="text-foreground">{r.recipient_name}</strong></p>}
+                              {r.mensaje && <p className="mt-0.5 italic font-medium">"{r.mensaje}"</p>}
+                            </div>
+                          )}
                         </>
                       )}
                       
