@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { useAppSettings } from "@/hooks/useAppSettings";
 
 export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' }) {
   const [mostrar, setMostrar] = useState(false);
   const { settings } = useAppSettings();
+  const videoRef = useRef(null);
 
   const iniciarSorpresa = () => {
     // Audio de fuegos artificiales independiente al hacer clic en el botón
@@ -27,6 +28,15 @@ export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' })
     setMostrar(true);
   };
 
+  // Forzar la reproducción del video inmediatamente cuando se monta en pantalla
+  useEffect(() => {
+    if (mostrar && videoRef.current) {
+      videoRef.current.play().catch(error => {
+        console.log("Reproducción automática prevenida por el navegador:", error);
+      });
+    }
+  }, [mostrar]);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-200 p-4">
       <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-white shadow-2xl border-4 border-white">
@@ -40,12 +50,14 @@ export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' })
         ) : (
           <div>
             <video
+              ref={videoRef}
               src={`/videos/${tarjeta}.mp4`}
               autoPlay
               loop
               muted
               playsInline
               className="w-full h-auto object-cover"
+              onError={(e) => console.error("Error cargando video:", e)}
             />
             <div className="p-6 text-center">
               <div className="mb-6 rounded-2xl bg-[#fef3c7] p-5 shadow-inner border border-[#78350f]/10">
