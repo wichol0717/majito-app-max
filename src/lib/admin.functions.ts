@@ -218,7 +218,7 @@ export const adminReports = createServerFn({ method: "POST" })
     const pedidos = { mostrador: 0, regalos: 0, pasteles: 0, eventos: 0 };
 
     const metodosMap: Record<string, { pedidos: number; monto: number }> = {};
-    const clientesMap: Record<string, { name: string; whatsapp: string; total_orders: number; total_spent: number; origen: string }> = {};
+    const clientesMap: Record<string, { name: string; whatsapp: string; total_orders: number; total_spent: number; origen: string; productosSet: Set<string> }> = {};
 
     // Rellenamos el mapa de días para garantizar una gráfica continua sin huecos temporales
     const ventasPorDiaMap: Record<string, number> = {};
@@ -235,7 +235,7 @@ export const adminReports = createServerFn({ method: "POST" })
       totalIngresos += total;
 
       // Desglose por canal
-      const canal = order.canal as "mostrador" | "regalos" | "pasteles";
+      const canal = order.canal as "mostrador" | "regalos" | "pasteles" | "eventos";
       if (ingresos[canal] !== undefined) {
         ingresos[canal] += total;
         pedidos[canal] += 1;
@@ -268,7 +268,8 @@ export const adminReports = createServerFn({ method: "POST" })
             whatsapp: order.whatsapp || "—",
             total_orders: 0,
             total_spent: 0,
-            origen: order.canal === "mostrador" ? "Mostrador" : order.canal === "regalos" ? "Regalos" : "Pasteles"
+            origen: order.canal === "mostrador" ? "Mostrador" : order.canal === "regalos" ? "Regalos" : order.canal === "pasteles" ? "Pasteles" : "Eventos",
+            productosSet: new Set<string>()
           };
         }
         clientesMap[clienteKey].total_orders += 1;
@@ -292,34 +293,56 @@ export const adminReports = createServerFn({ method: "POST" })
       .map(([metodo, m]) => ({ metodo, pedidos: m.pedidos, monto: m.monto }))
       .sort((a, b) => b.monto - a.monto);
 
-    // Formateamos los clientes top ordenados descendentemente
-    const topClientes = Object.values(clientesMap)
-      .sort((a, b) => b.total_spent - a.total_spent)
-      .slice(0, 10);
+    // --- PROCESAMIENTO DE PRODUCTOS POR CANAL Y CLIENTES ---
+    const productosPorCanal: Record<string, Array<{ nombre: string; cantidad: number; ingresos: number }>> = {
+      mostrador: [],
+      regalos: [],
+      pasteles: [],
+      eventos: []
+    };
 
-    // --- PROCESAMIENTO DE PRODUCTOS TOP ---
     const productosMap: Record<string, { nombre: string; cantidad: number; ingresos: number }> = {};
+    const productosRegalosMap: Record<string, { nombre: string; cantidad: number; ingresos: number }> = {};
+    const productosMostradorMap: Record<string, { nombre: string; cantidad: number; ingresos: number }> = {};
+    const productosPastelesMap: Record<string, { nombre: string; cantidad: number; ingresos: number }> = {};
 
     // Consultamos los productos de regalos del periodo
     const { data: giftOrders } = await s
       .from("gift_orders")
-      .select("gift_items")
+      .select("gift_items, customer_name")
       .gte("created_at", startDateIso)
       .neq("status", "canceled");
 
     giftOrders?.forEach((o: any) => {
+      const clienteName = (o.customer_name || "").trim();
       const items = Array.isArray(o.gift_items) ? o.gift_items : [];
       items.forEach((it: any) => {
         const nombre = (it.producto || it.nombre || it.name || it.title || "Producto").toUpperCase();
         const cant = Number(it.qty || it.cantidad || 1);
         const precio = Number(it.precio || it.price || 0);
+
+        // General top products
         if (!productosMap[nombre]) {
           productosMap[nombre] = { nombre, cantidad: 0, ingresos: 0 };
         }
         productosMap[nombre].cantidad += cant;
         productosMap[nombre].ingresos += (precio * cant);
+
+        // Canal Regalos
+        if (!productosRegalosMap[nombre]) {
+          productosRegalosMap[nombre] = { nombre, cantidad: 0, ingresos: 0 };
+        }
+        productosRegalosMap[nombre].cantidad += cant;
+        productosRegalosMap[nombre].ingresos += (precio * cant);
+
+        // Link to client
+        if (clienteName && clientesMap[clienteName]) {
+          clientesMap[clienteName].productosSet.add(nombre);
+        }
       });
     });
+
+    productosPorCanal.regalos = Object.values(productosRegalosMap).sort((a, b) => b.cantidad - a.cantidad);
 
     // Consultamos los productos de mostrador del periodo
     const { data: counterOrders } = await s
@@ -329,21 +352,54 @@ export const adminReports = createServerFn({ method: "POST" })
       .neq("status", "canceled");
 
     counterOrders?.forEach((o: any) => {
+      const clienteName = (o.customer_name || "").trim();
       const items = Array.isArray(o.items) ? o.items : [];
       items.forEach((it: any) => {
         const nombre = (it.producto || it.nombre || it.name || it.title || "Producto").toUpperCase();
         const cant = Number(it.qty || it.cantidad || 1);
         const precio = Number(it.precio || it.price || 0);
+
+        // General top products
         if (!productosMap[nombre]) {
           productosMap[nombre] = { nombre, cantidad: 0, ingresos: 0 };
         }
         productosMap[nombre].cantidad += cant;
         productosMap[nombre].ingresos += (precio * cant);
+
+        const isPastel = (it.categoria || "").toLowerCase().includes("pastel") || nombre.includes("PASTEL");
+        const targetMap = isPastel ? productosPastelesMap : productosMostradorMap;
+
+        if (!targetMap[nombre]) {
+          targetMap[nombre] = { nombre, cantidad: 0, ingresos: 0 };
+        }
+        targetMap[nombre].cantidad += cant;
+        targetMap[nombre].ingresos += (precio * cant);
+
+        // Link to client
+        if (clienteName && clientesMap[clienteName]) {
+          clientesMap[clienteName].productosSet.add(nombre);
+        }
       });
     });
 
+    productosPorCanal.mostrador = Object.values(productosMostradorMap).sort((a, b) => b.cantidad - a.cantidad);
+    productosPorCanal.pasteles = Object.values(productosPastelesMap).sort((a, b) => b.cantidad - a.cantidad);
+
     const topProductos = Object.values(productosMap)
       .sort((a, b) => b.cantidad - a.cantidad)
+      .slice(0, 10);
+
+    // Formateamos los clientes top ordenados descendentemente incluyendo sus productos
+    const topClientes = Object.values(clientesMap)
+      .map((c) => ({
+        name: c.name,
+        whatsapp: c.whatsapp,
+        total_orders: c.total_orders,
+        total_spent: c.total_spent,
+        origen: c.origen,
+        producto: Array.from(c.productosSet).join(", ") || "—"
+      }))
+      .sort((a, b) => b.total_spent - a.total_spent)
       .slice(0, 10);
 
     return {
@@ -356,6 +412,7 @@ export const adminReports = createServerFn({ method: "POST" })
       ventasPorDia,
       topProductos,
       metodos,
-      topClientes
+      topClientes,
+      productosPorCanal
     };
   });

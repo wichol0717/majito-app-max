@@ -154,12 +154,38 @@ function ReportesPage() {
             <Stat icon={<Users/>} label="Clientes top" value={String(data.topClientes.length)}/>
           </div>
 
-          <Panel title="Ingresos por canal" icon={<BarChart3/>}>
-            <div className="grid gap-2 sm:grid-cols-4">
-              <Chip label="Mostrador" value={fmt(data.ingresos.mostrador)} n={data.pedidos.mostrador}/>
-              <Chip label="Regalos" value={fmt(data.ingresos.regalos)} n={data.pedidos.regalos}/>
-              <Chip label="Pasteles" value={fmt(data.ingresos.pasteles)} n={data.pedidos.pasteles}/>
-              <Chip label="Eventos" value={fmt(data.ingresos.eventos)} n={data.pedidos.eventos}/>
+          <Panel title="Ingresos por canal y productos" icon={<BarChart3/>}>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {(["mostrador", "regalos", "pasteles", "eventos"] as const).map((canal) => {
+                const label = canal.charAt(0).toUpperCase() + canal.slice(1);
+                const monto = data.ingresos[canal] || 0;
+                const n = data.pedidos[canal] || 0;
+                const prods = data.productosPorCanal?.[canal] || [];
+                return (
+                  <div key={canal} className="rounded-xl bg-crema p-4 flex flex-col justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase text-mocha/70">{label}</p>
+                      <p className="text-xl font-bold text-mocha">{fmt(monto)}</p>
+                      <p className="text-xs text-mocha/70 mb-3">{n} pedidos</p>
+                    </div>
+                    <div className="border-t border-mocha/10 pt-2 mt-2">
+                      <p className="text-[11px] font-bold text-mocha mb-1">Productos:</p>
+                      {prods.length === 0 ? (
+                        <p className="text-[10px] text-mocha/60">Sin productos</p>
+                      ) : (
+                        <ul className="space-y-1 max-h-32 overflow-y-auto text-[11px] text-mocha">
+                          {prods.map((p, idx) => (
+                            <li key={idx} className="flex justify-between items-center">
+                              <span className="truncate pr-1" title={p.nombre}>{p.nombre}</span>
+                              <span className="font-semibold whitespace-nowrap">({p.cantidad})</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </Panel>
 
@@ -186,13 +212,14 @@ function ReportesPage() {
 
           <Panel title="Top clientes" icon={<Users/>}>
             <Table
-              head={["Cliente", "WhatsApp", "Pedidos", "Total gastado", "Origen"]}
+              head={["Cliente", "WhatsApp", "Pedidos", "Total gastado", "Origen", "Producto(s)"]}
               rows={data.topClientes.map((c: any) => [
                 c.name ?? "—",
                 c.whatsapp ?? "—",
                 String(c.total_orders ?? 0),
                 fmt(Number(c.total_spent ?? 0)),
                 c.origen ?? "—",
+                c.producto ?? "—",
               ])}
               empty="Sin clientes registrados"
             />
@@ -218,16 +245,6 @@ function Panel({ title, icon, children }: { title: string; icon: React.ReactNode
       <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-shocking">{icon}{title}</h2>
       {children}
     </section>
-  );
-}
-
-function Chip({ label, value, n }: { label: string; value: string; n: number }) {
-  return (
-    <div className="rounded-xl bg-crema p-3">
-      <p className="text-[11px] font-semibold uppercase text-mocha/70">{label}</p>
-      <p className="text-lg font-bold text-mocha">{value}</p>
-      <p className="text-[11px] text-mocha/70">{n} pedidos</p>
-    </div>
   );
 }
 
