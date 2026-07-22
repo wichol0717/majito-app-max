@@ -7,25 +7,20 @@ export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' })
   const { settings } = useAppSettings();
   const videoRef = useRef(null);
 
-  // Normalizador universal: lee cualquier objeto sin importar cómo se llamen sus propiedades
+  // Normalizador universal: detecta cualquier formato de texto u objeto de la compra
   const getNombreVideo = (t) => {
     if (!t) return 'cumple';
-    
     let textoBusqueda = '';
     if (typeof t === 'object' && t !== null) {
-      // Extrae y une todos los valores del objeto en un texto para encontrar la palabra clave
       textoBusqueda = Object.values(t).join(' ');
     } else {
       textoBusqueda = String(t);
     }
-
     const lower = textoBusqueda.toLowerCase().trim();
-    
     if (lower.includes('amor')) return 'amor';
     if (lower.includes('aniversario')) return 'aniversario';
     if (lower.includes('especial')) return 'especial';
     if (lower.includes('cumple')) return 'cumple';
-    
     return 'cumple';
   };
 
@@ -81,6 +76,7 @@ export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' })
               loop
               muted
               playsInline
+              preload="auto"
               className="w-full h-auto object-cover"
               onError={(e) => console.error("Error cargando video:", e)}
             />
