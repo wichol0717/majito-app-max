@@ -1,21 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import React, { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { AdminShell } from "@/features/admin/AdminShell";
-
-// =========================================================
-// INSTANCIA DIRECTA DE SUPABASE
-// =========================================================
-const supabaseUrl =
-  import.meta.env.VITE_SUPABASE_URL ||
-  "https://jntrxjvntiwrmjzsxona.supabase.co";
-
-const supabaseAnonKey =
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  import.meta.env.SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudHJ4anZudGl3cm1qenN4b25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDA0MDA0MDAsImV4cCI6MjAxNTk3NjQwMH0.placeholder";
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from "@/api/supabase";
 
 // =========================================================
 // INTERFACES
@@ -65,16 +51,18 @@ function Inventario() {
 
       if (pErr) throw pErr;
 
-      // 2. Obtener variantes
-      const { data: vars, error: vErr } = await supabase
+      // 2. Obtener variantes (casteo para obviar missing type en database.types.ts)
+      const { data: vars, error: vErr } = await (supabase as any)
         .from("product_variants")
         .select("*");
 
       if (vErr) throw vErr;
 
+      const variantesLista = (vars || []) as ProductVariant[];
+
       // 3. Vincular variantes a cada producto
       const unificados = (prods || []).map((p: any) => {
-        const misVariantes = (vars || []).filter((v: ProductVariant) => v.product_id === p.id);
+        const misVariantes = variantesLista.filter((v) => v.product_id === p.id);
         return {
           ...p,
           variants: misVariantes,
@@ -115,7 +103,7 @@ function Inventario() {
   // Guardar variante en Supabase
   async function guardarVariante(variant: ProductVariant) {
     setSavingId(`var-${variant.id}`);
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from("product_variants")
       .update({ stock: variant.stock, precio: variant.precio })
       .eq("id", variant.id);
@@ -133,7 +121,7 @@ function Inventario() {
     setSavingId(`prod-${product.id}`);
     const { error } = await supabase
       .from("products")
-      .update({ stock: product.stock, precio: product.precio })
+      .update({ stock: product.stock, precio: product.precio ?? 0 })
       .eq("id", product.id);
 
     setSavingId(null);
