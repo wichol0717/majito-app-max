@@ -42,7 +42,11 @@ export function ProductCard({ product, onGiftClick }: Props) {
     (i: any) =>
       i.product.id === product.id &&
       !i.isGift &&
-      (!isPastel || i.selectedSize?.nombre === selectedSize?.nombre || i.product?.selectedSize?.nombre === selectedSize?.nombre)
+      (!isPastel ||
+        i.selectedSize?.nombre === selectedSize?.nombre ||
+        i.product?.selectedSize?.nombre === selectedSize?.nombre ||
+        i.product?.tamano === selectedSize?.nombre ||
+        i.tamano === selectedSize?.nombre)
   );
 
   // Precio dinámico a mostrar según el tamaño elegido
@@ -53,11 +57,15 @@ export function ProductCard({ product, onGiftClick }: Props) {
     if (nonGiftLine) {
       increment(nonGiftLine.key);
     } else {
-      // Pasamos el producto junto con el precio y tamaño ajustados como un solo objeto
+      // Pasamos el producto con el tamaño integrado en el nombre y en propiedades de texto plano
       const productToAdd = {
         ...product,
+        nombre: isPastel && selectedSize ? `${product.nombre} (${selectedSize.nombre})` : product.nombre,
         precio: currentPrice,
         selectedSize,
+        tamano: isPastel ? selectedSize?.nombre : undefined,
+        tamaño: isPastel ? selectedSize?.nombre : undefined,
+        size: isPastel ? selectedSize?.nombre : undefined,
       };
       addToCart(productToAdd as any, 1);
     }
