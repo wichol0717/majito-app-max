@@ -269,21 +269,31 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
                           {/* ÍTEMS DE PEDIDOS NORMALES / MOSTRADOR */}
                           {r.items && Array.isArray(r.items) && r.items.length > 0 && (
                             <ul className="mt-2 space-y-0.5 text-[11px] text-mocha">
-                              {r.items.slice(0, 6).map((it: any, i: number) => (
-                                <li key={i}>• {it.qty ?? it.cantidad ?? 1}× {it.nombre ?? it.name ?? it.title ?? "producto"}</li>
-                              ))}
+                              {r.items.slice(0, 6).map((it: any, i: number) => {
+                                const sizeStr = it.tamano || it.tamaño || it.size || it.variante || it.variant || it.selectedSize || it.talla;
+                                return (
+                                  <li key={i}>
+                                    • {it.qty ?? it.cantidad ?? 1}× {it.nombre ?? it.name ?? it.title ?? "producto"}
+                                    {sizeStr && <span className="ml-1 font-bold text-shocking">({String(sizeStr).toUpperCase()})</span>}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           )}
 
                           {/* ÍTEMS DE PEDIDOS DE REGALO (gift_items) */}
                           {r.gift_items && Array.isArray(r.gift_items) && r.gift_items.length > 0 && (
                             <ul className="mt-2 space-y-0.5 text-[11px] font-semibold text-shocking">
-                              {r.gift_items.map((it: any, i: number) => (
-                                <li key={i}>
-                                  • {it.cantidad ?? 1}× {it.producto ?? "Producto de regalo"}
-                                  {it.mensaje ? ` [Msg: "${it.mensaje}"]` : ""}
-                                </li>
-                              ))}
+                              {r.gift_items.map((it: any, i: number) => {
+                                const sizeStr = it.tamano || it.tamaño || it.size || it.variante || it.variant || it.selectedSize || it.talla;
+                                return (
+                                  <li key={i}>
+                                    • {it.cantidad ?? 1}× {it.producto ?? "Producto de regalo"}
+                                    {sizeStr && <span className="ml-1 font-extrabold underline">({String(sizeStr).toUpperCase()})</span>}
+                                    {it.mensaje ? ` [Msg: "${it.mensaje}"]` : ""}
+                                  </li>
+                                );
+                              })}
                             </ul>
                           )}
 
@@ -291,6 +301,11 @@ function KDSBoard({ password, onLogout }: { password: string; onLogout: () => vo
                           {!r.items?.length && !r.gift_items?.length && r.producto && (
                             <p className="mt-2 text-[11px] font-semibold text-shocking">
                               • {r.cantidad ?? 1}× {r.producto}
+                              {(r.tamano || r.tamaño || r.size || r.variante || r.variant) && (
+                                <span className="ml-1 font-extrabold underline">
+                                  ({String(r.tamano || r.tamaño || r.size || r.variante || r.variant).toUpperCase()})
+                                </span>
+                              )}
                             </p>
                           )}
 
