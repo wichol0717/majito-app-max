@@ -39,7 +39,7 @@ function ReportesPage() {
 
       doc.setFontSize(12);
       doc.setTextColor(100, 116, 139);
-      doc.text(`Reporte de Desempeño Comercial (Últimos ${periodDays} días)`, 14, 28);
+      doc.text(`Reporte Detallado de Desempeño Comercial (Últimos ${periodDays} días)`, 14, 28);
       
       const fechaHoy = new Date().toLocaleDateString("es-MX");
       doc.text(`Fecha de emisión: ${fechaHoy}`, 14, 34);
@@ -48,6 +48,7 @@ function ReportesPage() {
       doc.setLineWidth(0.5);
       doc.line(14, 38, 196, 38);
 
+      // Métricas Clave
       doc.setFontSize(14);
       doc.setTextColor(51, 65, 85);
       doc.text("Métricas Clave", 14, 46);
@@ -59,36 +60,47 @@ function ReportesPage() {
           ["Ingresos Totales", fmt(reportData.totalIngresos)],
           ["Pedidos Registrados", String(reportData.totalPedidos)],
           ["Ticket Promedio", fmt(reportData.ticketPromedio)],
-          ["Clientes Activos", String(reportData.topClientes.length)]
+          ["Clientes Frecuentes", String(reportData.topClientes.length)]
         ],
         headStyles: { fillColor: [244, 114, 182] },
         theme: "striped",
         styles: { font: "helvetica", fontSize: 10 },
       });
 
-      const nextY1 = (doc as any).lastAutoTable.finalY + 10;
-      doc.text("Ingresos por Canal", 14, nextY1);
+      // Ingresos por Canal y sus Productos Detallados
+      let nextY = (doc as any).lastAutoTable.finalY + 10;
+      doc.text("Ingresos y Productos por Canal", 14, nextY);
 
-      autoTable(doc, {
-        startY: nextY1 + 4,
-        head: [["Canal", "Ingresos", "Pedidos"]],
-        body: [
-          ["Mostrador", fmt(reportData.ingresos.mostrador), String(reportData.pedidos.mostrador)],
-          ["Regalos", fmt(reportData.ingresos.regalos), String(reportData.pedidos.regalos)],
-          ["Pasteles", fmt(reportData.ingresos.pasteles), String(reportData.pedidos.pasteles)],
-          ["Eventos", fmt(reportData.ingresos.eventos), String(reportData.pedidos.eventos)]
-        ],
-        headStyles: { fillColor: [141, 110, 99] },
-        theme: "striped",
-        styles: { font: "helvetica", fontSize: 10 },
+      const canalRows: string[][] = [];
+      (["mostrador", "regalos", "pasteles", "eventos"] as const).forEach((canal) => {
+        const label = canal.charAt(0).toUpperCase() + canal.slice(1);
+        const monto = fmt(reportData.ingresos[canal] || 0);
+        const totalPeds = String(reportData.pedidos[canal] || 0);
+        const prods = reportData.productosPorCanal?.[canal] || [];
+        const prodsStr = prods.length > 0 
+          ? prods.map(p => `${p.nombre} (${p.cantidad})`).join(", ") 
+          : "Sin productos";
+        
+        canalRows.push([label, `${monto} (${totalPeds} ped.)`, prodsStr]);
       });
 
-      const nextY2 = (doc as any).lastAutoTable.finalY + 10;
-      doc.text("Top Productos Vendidos", 14, nextY2);
+      autoTable(doc, {
+        startY: nextY + 4,
+        head: [["Canal", "Ingresos / Pedidos", "Productos Vendidos (Cantidad)"]],
+        body: canalRows,
+        headStyles: { fillColor: [141, 110, 99] },
+        theme: "striped",
+        styles: { font: "helvetica", fontSize: 9 },
+        columnStyles: { 2: { cellWidth: 90 } }
+      });
+
+      // Top Productos
+      nextY = (doc as any).lastAutoTable.finalY + 10;
+      doc.text("Top Productos Más Vendidos", 14, nextY);
 
       autoTable(doc, {
-        startY: nextY2 + 4,
-        head: [["Producto", "Cantidad Vendida", "Ingresos Generados"]],
+        startY: nextY + 4,
+        head: [["Producto", "Cantidad", "Ingresos"]],
         body: reportData.topProductos.map((p: any) => [
           p.producto ?? p.nombre,
           String(p.cantidad),
@@ -99,9 +111,33 @@ function ReportesPage() {
         styles: { font: "helvetica", fontSize: 10 },
       });
 
-      doc.save(`Reporte_MajitoCake_${periodDays}dias_${fechaHoy.replace(/\//g, "-")}.pdf`);
+      // Top Clientes con Productos
+      nextY = (doc as any).lastAutoTable.finalY + 10;
+      if (nextY > 250) {
+        doc.addPage();
+        nextY = 20;
+      }
+      doc.text("Top Clientes y Productos Adquiridos", 14, nextY);
+
+      autoTable(doc, {
+        startY: nextY + 4,
+        head: [["Cliente", "WhatsApp", "Pedidos", "Gastado", "Canal", "Producto(s)"]],
+        body: reportData.topClientes.map((c: any) => [
+          c.name ?? "—",
+          c.whatsapp ?? "—",
+          String(c.total_orders ?? 0),
+          fmt(Number(c.total_spent ?? 0)),
+          c.origen ?? "—",
+          c.producto ?? "—",
+        ]),
+        headStyles: { fillColor: [141, 110, 99] },
+        theme: "striped",
+        styles: { font: "helvetica", fontSize: 9 },
+      });
+
+      doc.save(`Reporte_Detallado_MajitoCake_${periodDays}dias_${fechaHoy.replace(/\//g, "-")}.pdf`);
     } catch (e) {
-      console.error("Error al generar el PDF:", e);
+      console.error("Error al generar el PDF detallado:", e);
     }
   };
 
@@ -137,7 +173,7 @@ function ReportesPage() {
             className="flex items-center gap-1.5 rounded-xl bg-shocking px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-opacity-90 transition active:scale-95"
           >
             <FileDown size={14} />
-            Exportar PDF
+            Exportar PDF Detallado
           </button>
         )}
       </div>
