@@ -89,8 +89,8 @@ function ReportesPage() {
       autoTable(doc, {
         startY: nextY2 + 4,
         head: [["Producto", "Cantidad Vendida", "Ingresos Generados"]],
-        body: reportData.topProductos.map((p) => [
-          p.nombre,
+        body: reportData.topProductos.map((p: any) => [
+          p.producto ?? p.nombre,
           String(p.cantidad),
           fmt(p.ingresos)
         ]),
@@ -171,7 +171,7 @@ function ReportesPage() {
             <Panel title="Top productos" icon={<ShoppingBag/>}>
               <Table
                 head={["Producto", "Cant.", "Ingresos"]}
-                rows={data.topProductos.map((p) => [p.nombre, String(p.cantidad), fmt(p.ingresos)])}
+                rows={data.topProductos.map((p: any) => [p.producto ?? p.nombre, String(p.cantidad), fmt(p.ingresos)])}
                 empty="Sin productos en el periodo"
               />
             </Panel>
