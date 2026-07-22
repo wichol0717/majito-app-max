@@ -34,7 +34,6 @@ export function DigitalCard({
 
     const map: Record<string, string> = {
       cumple: "/videos/cumple.mp4",
-      boda: "/videos/especial.mp4",
       amor: "/videos/amor.mp4",
       teamo: "/videos/amor.mp4",
       especial: "/videos/especial.mp4",
