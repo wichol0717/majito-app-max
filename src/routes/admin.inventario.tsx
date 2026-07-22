@@ -18,18 +18,19 @@ interface ProductVariant {
 interface Product {
   id: number;
   nombre: string;
-  categoria?: string;
+  categoria?: string | null;
   precio: number;
   stock: number;
-  activo?: string | boolean;
-  img?: string;
+  activo?: string | boolean | null;
+  img?: string | null;
   variants?: ProductVariant[];
 }
 
 // =========================================================
-// FUNCIÓN PARA ORDENAR POR CATEGORÍA ESPECÍFICA
+// FUNCIÓN PARA ORDENAR POR CATEGORÍA ESPECÍFICA (PROTEGIDA CONTRA NULL)
 // =========================================================
-function obtenerPrioridadCategoria(cat: string = ""): number {
+function obtenerPrioridadCategoria(cat?: string | null): number {
+  if (!cat) return 999; // Si es null, undefined o texto vacío, va al final
   const c = cat.toLowerCase().trim();
 
   if (c.startsWith("pastel")) return 0;
@@ -38,11 +39,11 @@ function obtenerPrioridadCategoria(cat: string = ""): number {
   if (c.includes("caja") && c.includes("galleta")) return 4;
   if (c.includes("caja") && c.includes("brownie")) return 5;
   if (c.includes("caja") && (c.includes("cupcake") || c.includes("cup cake"))) return 6;
-  if (c.includes("cup cake") || c.includes("cupcake") || c.includes("cup cake")) return 3;
+  if (c.includes("cup cake") || c.includes("cupcake")) return 3;
   if (c.includes("promocion") || c.includes("promociones")) return 7;
   if (c.includes("vela")) return 8;
 
-  return 999; // Cualquier otra categoría va al final
+  return 999; // Cualquier otra categoría sin regla va al final
 }
 
 export const Route = createFileRoute("/admin/inventario")({
