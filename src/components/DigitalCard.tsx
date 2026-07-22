@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import confetti from "canvas-confetti";
 import { Gift, Volume2, VolumeX } from "lucide-react";
 
@@ -27,25 +27,35 @@ export function DigitalCard({
   const [isPlaying, setIsPlaying] = useState(false);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const getCardImage = (designId: string) => {
+  const getCardVideo = (designId: string) => {
     const cleanDesign = (designId || "cumple").toLowerCase().trim().replace(/\s+/g, "");
 
     const map: Record<string, string> = {
-      cumple: "/tarjetas/cumple.jpg",
-      boda: "/tarjetas/boda.jpg",
-      amor: "/tarjetas/amor.jpg",
-      teamo: "/tarjetas/amor.jpg",
-      especial: "/tarjetas/especial.jpg",
-      aniversario: "/tarjetas/aniversario.jpg",
+      cumple: "/videos/cumple.mp4",
+      boda: "/videos/especial.mp4",
+      amor: "/videos/amor.mp4",
+      teamo: "/videos/amor.mp4",
+      especial: "/videos/especial.mp4",
+      aniversario: "/videos/aniversario.mp4",
     };
 
     if (cleanDesign === "teamo" || cleanDesign === "amo") {
-      return "/tarjetas/amor.jpg";
+      return "/videos/amor.mp4";
     }
 
-    return map[cleanDesign] || "/tarjetas/cumple.jpg";
+    return map[cleanDesign] || "/videos/cumple.mp4";
   };
+
+  useEffect(() => {
+    if (revealed && videoRef.current) {
+      videoRef.current.load();
+      videoRef.current.play().catch(error => {
+        console.log("Reproducción de video prevenida por el navegador:", error);
+      });
+    }
+  }, [revealed, design]);
 
   const formatWaNumber = (phone: string) => {
     const cleaned = phone.replace(/[^0-9]/g, "");
@@ -126,7 +136,18 @@ export function DigitalCard({
             {isPlaying ? "Música ON" : "Silenciado"}
           </button>
 
-          <img src={getCardImage(design)} alt="Tarjeta Regalo" className="w-full h-auto object-cover" />
+          <video
+            ref={videoRef}
+            src={getCardVideo(design)}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="w-full h-auto object-cover"
+            onError={(e) => console.error("Error cargando video:", e)}
+          />
+
           <div className="p-6 text-center">
             <div className="mb-6 rounded-2xl bg-crema p-5 shadow-inner border border-mocha/10">
               <p className="text-2xl">❤️</p>
