@@ -26,6 +26,25 @@ interface Product {
   variants?: ProductVariant[];
 }
 
+// =========================================================
+// FUNCIÓN PARA ORDENAR POR CATEGORÍA ESPECÍFICA
+// =========================================================
+function obtenerPrioridadCategoria(cat: string = ""): number {
+  const c = cat.toLowerCase().trim();
+
+  if (c.startsWith("pastel")) return 0;
+  if (c === "galletas" || c === "galleta") return 1;
+  if (c === "brownies" || c === "brownie") return 2;
+  if (c.includes("caja") && c.includes("galleta")) return 4;
+  if (c.includes("caja") && c.includes("brownie")) return 5;
+  if (c.includes("caja") && (c.includes("cupcake") || c.includes("cup cake"))) return 6;
+  if (c.includes("cup cake") || c.includes("cupcake") || c.includes("cup cake")) return 3;
+  if (c.includes("promocion") || c.includes("promociones")) return 7;
+  if (c.includes("vela")) return 8;
+
+  return 999; // Cualquier otra categoría va al final
+}
+
 export const Route = createFileRoute("/admin/inventario")({
   component: () => <Inventario />,
 });
@@ -46,8 +65,7 @@ function Inventario() {
       // 1. Obtener productos
       const { data: prods, error: pErr } = await supabase
         .from("products")
-        .select("*")
-        .order("nombre");
+        .select("*");
 
       if (pErr) throw pErr;
 
@@ -67,6 +85,17 @@ function Inventario() {
           ...p,
           variants: misVariantes,
         };
+      });
+
+      // 4. Ordenar por prioridad de categoría y luego alfabéticamente por nombre
+      unificados.sort((a: Product, b: Product) => {
+        const prioA = obtenerPrioridadCategoria(a.categoria);
+        const prioB = obtenerPrioridadCategoria(b.categoria);
+
+        if (prioA !== prioB) {
+          return prioA - prioB;
+        }
+        return (a.nombre || "").localeCompare(b.nombre || "");
       });
 
       setProducts(unificados);
