@@ -17,7 +17,6 @@ const SUGERENCIAS = [
 
 const TARJETAS = [
   { id: "cumple", label: "Feliz Cumpleaños", img: "/tarjetas/cumple.jpg" },
-  { id: "boda", label: "Feliz Boda", img: "/tarjetas/boda.jpg" },
   { id: "aniversario", label: "Feliz Aniversario", img: "/tarjetas/aniversario.jpg" },
   { id: "amor", label: "Te amo", img: "/tarjetas/amor.jpg" },
   { id: "especial", label: "Para alguien especial", img: "/tarjetas/especial.jpg" },
