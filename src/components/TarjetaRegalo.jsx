@@ -7,7 +7,7 @@ export default function TarjetaRegalo({ telefonoComprador, tarjeta = 'cumple' })
   const { settings } = useAppSettings();
   const videoRef = useRef(null);
 
-  // Normalizador universal: detecta cualquier formato de texto u objeto de la compra
+  // Normalizador universal : detecta cualquier formato de texto u objeto de la compra
   const getNombreVideo = (t) => {
     if (!t) return 'cumple';
     let textoBusqueda = '';
