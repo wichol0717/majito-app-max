@@ -310,7 +310,7 @@ export const adminReports = createServerFn({ method: "POST" })
     giftOrders?.forEach((o: any) => {
       const items = Array.isArray(o.gift_items) ? o.gift_items : [];
       items.forEach((it: any) => {
-        const nombre = (it.nombre || it.name || it.title || "Producto").toUpperCase();
+        const nombre = (it.producto || it.nombre || it.name || it.title || "Producto").toUpperCase();
         const cant = Number(it.qty || it.cantidad || 1);
         const precio = Number(it.precio || it.price || 0);
         if (!productosMap[nombre]) {
@@ -331,7 +331,7 @@ export const adminReports = createServerFn({ method: "POST" })
     counterOrders?.forEach((o: any) => {
       const items = Array.isArray(o.items) ? o.items : [];
       items.forEach((it: any) => {
-        const nombre = (it.nombre || it.name || it.title || "Producto").toUpperCase();
+        const nombre = (it.producto || it.nombre || it.name || it.title || "Producto").toUpperCase();
         const cant = Number(it.qty || it.cantidad || 1);
         const precio = Number(it.precio || it.price || 0);
         if (!productosMap[nombre]) {
