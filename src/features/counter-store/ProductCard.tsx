@@ -80,7 +80,17 @@ export function ProductCard({ product, onGiftClick }: Props) {
       <div className="relative">
         <button
           type="button"
-          onClick={() => onGiftClick(product)}
+          onClick={() =>
+            onGiftClick({
+              ...product,
+              nombre: isPastel && selectedSize ? `${product.nombre} (${selectedSize.nombre})` : product.nombre,
+              precio: currentPrice,
+              selectedSize,
+              tamano: isPastel ? selectedSize?.nombre : undefined,
+              tamaño: isPastel ? selectedSize?.nombre : undefined,
+              size: isPastel ? selectedSize?.nombre : undefined,
+            } as any)
+          }
           aria-label={`Regalar ${product.nombre ?? "producto"}`}
           className="absolute left-2 top-2 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-sweet-pink text-white shadow-lg transition hover:scale-110 hover:bg-shocking"
         >
