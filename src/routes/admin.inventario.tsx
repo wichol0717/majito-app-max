@@ -51,7 +51,7 @@ function Inventario() {
 
       if (pErr) throw pErr;
 
-      // 2. Obtener variantes (casteo para obviar missing type en database.types.ts)
+      // 2. Obtener variantes
       const { data: vars, error: vErr } = await (supabase as any)
         .from("product_variants")
         .select("*");
@@ -82,7 +82,18 @@ function Inventario() {
     setExpandedRow(expandedRow === id ? null : id);
   };
 
-  // Manejo de cambios en variantes
+  // Manejo de cambios en productos simples (sin variantes)
+  const handleProductChange = (
+    productId: number,
+    field: "stock" | "precio",
+    value: number
+  ) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, [field]: value } : p))
+    );
+  };
+
+  // Manejo de cambios en variantes (con tamaños)
   const handleVariantChange = (
     productId: number,
     variantId: number,
@@ -149,14 +160,14 @@ function Inventario() {
           <div className="p-10 text-center text-mocha">Cargando inventario...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-mocha">
+            <table className="w-full text-left text-xs text-mocha border-collapse">
               <thead className="bg-crema/40 text-xs uppercase font-bold text-mocha border-b border-mocha/10">
                 <tr>
                   <th className="p-3">Producto</th>
                   <th className="p-3">Categoría</th>
                   <th className="p-3 text-center">Variantes / Tamaños</th>
-                  <th className="p-3 text-center">Stock Total</th>
-                  <th className="p-3 text-right">Precio Base</th>
+                  <th className="p-3 text-center">Stock</th>
+                  <th className="p-3 text-right">Precio ($)</th>
                   <th className="p-3 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -180,11 +191,13 @@ function Inventario() {
                           )}
                           <span>{p.nombre}</span>
                         </td>
+
                         <td className="p-3">
                           <span className="rounded-full bg-mocha/10 px-2 py-0.5 text-[10px] font-semibold">
                             {p.categoria || "General"}
                           </span>
                         </td>
+
                         <td className="p-3 text-center">
                           {tieneVariantes ? (
                             <button
@@ -197,18 +210,48 @@ function Inventario() {
                             <span className="text-mocha/50 italic">Sin variantes</span>
                           )}
                         </td>
-                        <td className="p-3 text-center font-bold">
-                          <span
-                            className={`px-2 py-0.5 rounded-full ${
-                              stockTotal <= 3 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700"
-                            }`}
-                          >
-                            {stockTotal} un.
-                          </span>
+
+                        {/* STOCK EDITABLE SI NO TIENE VARIANTES */}
+                        <td className="p-3 text-center">
+                          {tieneVariantes ? (
+                            <span
+                              className={`px-2 py-0.5 rounded-full font-bold ${
+                                stockTotal <= 3 ? "bg-red-100 text-red-600" : "bg-green-100 text-green-700"
+                              }`}
+                            >
+                              {stockTotal} un.
+                            </span>
+                          ) : (
+                            <input
+                              type="number"
+                              value={p.stock ?? 0}
+                              onChange={(e) =>
+                                handleProductChange(p.id, "stock", Number(e.target.value))
+                              }
+                              className="w-20 rounded border border-mocha/20 px-2 py-1 text-center font-bold text-mocha focus:ring-2 focus:ring-shocking"
+                            />
+                          )}
                         </td>
-                        <td className="p-3 text-right font-semibold">
-                          ${p.precio || 0}
+
+                        {/* PRECIO EDITABLE SI NO TIENE VARIANTES */}
+                        <td className="p-3 text-right">
+                          {tieneVariantes ? (
+                            <span className="font-semibold">${p.precio || 0}</span>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1">
+                              <span className="text-mocha/60">$</span>
+                              <input
+                                type="number"
+                                value={p.precio ?? 0}
+                                onChange={(e) =>
+                                  handleProductChange(p.id, "precio", Number(e.target.value))
+                                }
+                                className="w-20 rounded border border-mocha/20 px-2 py-1 text-right font-bold text-mocha focus:ring-2 focus:ring-shocking"
+                              />
+                            </div>
+                          )}
                         </td>
+
                         <td className="p-3 text-center">
                           {!tieneVariantes && (
                             <button
