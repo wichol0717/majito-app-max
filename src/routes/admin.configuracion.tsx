@@ -7,10 +7,17 @@ import { adminListSettings, adminUpdateSetting } from "@/lib/admin.functions";
 import { invalidateSettingsCache } from "@/hooks/useAppSettings";
 
 // =========================================================
-// INSTANCIA DIRECTA DE SUPABASE (Evita errores de ruta/nombre)
+// INSTANCIA DIRECTA DE SUPABASE (Con fallbacks de seguridad)
 // =========================================================
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL ||
+  "https://jntrxjvntiwrmjzsxona.supabase.co";
+
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpudHJ4anZudGl3cm1qenN4b25hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDA0MDA0MDAsImV4cCI6MjAxNTk3NjQwMH0.placeholder";
+
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // =========================================================
@@ -59,10 +66,15 @@ function Config() {
 
   useEffect(() => {
     // Carga directa de datos
-    list({ data: { password: password } }).then((d) => {
-      setRows(d as any[]);
-      setLoading(false);
-    });
+    list({ data: { password: password } })
+      .then((d) => {
+        setRows(Array.isArray(d) ? d : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error al cargar configuración:", err);
+        setLoading(false);
+      });
   }, []);
 
   async function save(key: string, value: any) {
@@ -92,7 +104,7 @@ function Config() {
 }
 
 function SettingRow({ row, onSave }: any) {
-  const [val, setVal] = useState(String(row.value));
+  const [val, setVal] = useState(String(row?.value ?? ""));
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-mocha/10 pb-3 last:border-none">
       <label className="min-w-[220px] text-sm font-semibold text-foreground">{LABELS[row.key] ?? row.key}</label>
@@ -118,24 +130,29 @@ function PastelesConfig() {
 
   async function cargarPasteles() {
     setLoadingPasteles(true);
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("categoria", "Pasteles")
-      .order("nombre");
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("categoria", "Pasteles")
+        .order("nombre");
 
-    if (!error && data) {
-      const normalizados = data.map((p: any) => ({
-        ...p,
-        tamanios: p.tamanios && p.tamanios.length > 0 ? p.tamanios : [
-          { nombre: "Individual", precio: p.precio || 150, porciones: "Pequeño" },
-          { nombre: "Mediano", precio: 350, porciones: "6 a 8 personas" },
-          { nombre: "Grande", precio: 600, porciones: "15 a 20 personas" }
-        ]
-      }));
-      setPasteles(normalizados as Product[]);
+      if (!error && data) {
+        const normalizados = data.map((p: any) => ({
+          ...p,
+          tamanios: p.tamanios && p.tamanios.length > 0 ? p.tamanios : [
+            { nombre: "Individual", precio: p.precio || 150, porciones: "Pequeño" },
+            { nombre: "Mediano", precio: 350, porciones: "6 a 8 personas" },
+            { nombre: "Grande", precio: 600, porciones: "15 a 20 personas" }
+          ]
+        }));
+        setPasteles(normalizados as Product[]);
+      }
+    } catch (e) {
+      console.error("Error consultando pasteles en Supabase:", e);
+    } finally {
+      setLoadingPasteles(false);
     }
-    setLoadingPasteles(false);
   }
 
   const handlePriceChange = (productId: number, sizeName: string, newPrice: number) => {
