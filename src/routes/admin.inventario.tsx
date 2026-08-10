@@ -7,7 +7,7 @@ import { supabase } from "@/api/supabase";
 // INTERFACES
 // =========================================================
 interface ProductVariant {
-  id: number;
+  id?: number;
   product_id: number;
   nombre: string;
   precio: number;
@@ -21,16 +21,23 @@ interface Product {
   categoria?: string | null;
   precio: number;
   stock: number;
-  activo?: string | boolean | null;
+  activo?: string | boolean | null | number;
   img?: string | null;
   variants?: ProductVariant[];
 }
 
+// Tamaños estándar predefinidos para los pasteles
+const TAMAÑOS_ESTANDAR_PASTELES = [
+  { nombre: "Individual", porciones: "Pequeño / 1-2 pers." },
+  { nombre: "Mediano", porciones: "6 a 8 personas" },
+  { nombre: "Grande", porciones: "15 a 20 personas" },
+];
+
 // =========================================================
-// FUNCIÓN PARA ORDENAR POR CATEGORÍA ESPECÍFICA (PROTEGIDA CONTRA NULL)
+// FUNCIÓN PARA ORDENAR POR CATEGORÍA
 // =========================================================
 function obtenerPrioridadCategoria(cat?: string | null): number {
-  if (!cat) return 999; // Si es null, undefined o texto vacío, va al final
+  if (!cat) return 999;
   const c = cat.toLowerCase().trim();
 
   if (c.startsWith("pastel")) return 0;
@@ -43,7 +50,7 @@ function obtenerPrioridadCategoria(cat?: string | null): number {
   if (c.includes("promocion") || c.includes("promociones")) return 7;
   if (c.includes("vela")) return 8;
 
-  return 999; // Cualquier otra categoría sin regla va al final
+  return 999;
 }
 
 export const Route = createFileRoute("/admin/inventario")({
@@ -56,6 +63,9 @@ function Inventario() {
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<string | number | null>(null);
 
+  // Estado local temporal para los inputs de los tamaños estándar por producto
+  const [variantInputs, setVariantInputs] = useState<Record<string, { precio: number; stock: number }>>({});
+
   useEffect(() => {
     cargarInventario();
   }, []);
@@ -63,43 +73,47 @@ function Inventario() {
   async function cargarInventario() {
     setLoading(true);
     try {
-      // 1. Obtener productos
-      const { data: prods, error: pErr } = await supabase
-        .from("products")
-        .select("*");
-
+      const { data: prods, error: pErr } = await supabase.from("products").select("*");
       if (pErr) throw pErr;
 
-      // 2. Obtener variantes
-      const { data: vars, error: vErr } = await (supabase as any)
-        .from("product_variants")
-        .select("*");
-
+      const { data: vars, error: vErr } = await (supabase as any).from("product_variants").select("*");
       if (vErr) throw vErr;
 
       const variantesLista = (vars || []) as ProductVariant[];
 
-      // 3. Vincular variantes a cada producto
       const unificados = (prods || []).map((p: any) => {
-        const misVariantes = variantesLista.filter((v) => v.product_id === p.id);
+        const misVariantes = variantesLista.filter(
+          (v: ProductVariant) => String(v.product_id) === String(p.id)
+        );
         return {
           ...p,
           variants: misVariantes,
         };
       });
 
-      // 4. Ordenar por prioridad de categoría y luego alfabéticamente por nombre
       unificados.sort((a: Product, b: Product) => {
         const prioA = obtenerPrioridadCategoria(a.categoria);
         const prioB = obtenerPrioridadCategoria(b.categoria);
-
-        if (prioA !== prioB) {
-          return prioA - prioB;
-        }
+        if (prioA !== prioB) return prioA - prioB;
         return (a.nombre || "").localeCompare(b.nombre || "");
       });
 
       setProducts(unificados);
+
+      const initialInputs: Record<string, { precio: number; stock: number }> = {};
+      unificados.forEach((p) => {
+        TAMAÑOS_ESTANDAR_PASTELES.forEach((est) => {
+          const encontrada = p.variants?.find(
+            (v: ProductVariant) => v.nombre.toLowerCase() === est.nombre.toLowerCase()
+          );
+          initialInputs[`${p.id}-${est.nombre}`] = {
+            precio: encontrada ? encontrada.precio : 0,
+            stock: encontrada ? encontrada.stock : 0,
+          };
+        });
+      });
+      setVariantInputs(initialInputs);
+
     } catch (e) {
       console.error("Error al cargar inventario:", e);
     } finally {
@@ -107,57 +121,46 @@ function Inventario() {
     }
   }
 
-  // Alternar vista desplegable de tamaños
   const toggleExpand = (id: number) => {
     setExpandedRow(expandedRow === id ? null : id);
   };
 
-  // Manejo de cambios en productos simples (sin variantes)
-  const handleProductChange = (
-    productId: number,
-    field: "stock" | "precio",
-    value: number
-  ) => {
+  const handleProductChange = (productId: number, field: "stock" | "precio", value: number) => {
     setProducts((prev) =>
       prev.map((p) => (p.id === productId ? { ...p, [field]: value } : p))
     );
   };
 
-  // Manejo de cambios en variantes (con tamaños)
-  const handleVariantChange = (
-    productId: number,
-    variantId: number,
-    field: "stock" | "precio",
-    value: number
-  ) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id !== productId) return p;
-        const nuevasVariantes = (p.variants || []).map((v) =>
-          v.id === variantId ? { ...v, [field]: value } : v
-        );
-        return { ...p, variants: nuevasVariantes };
-      })
-    );
+  const handleVariantInputChange = (productId: number, nombreTamaño: string, field: "precio" | "stock", value: number) => {
+    const key = `${productId}-${nombreTamaño}`;
+    setVariantInputs((prev) => ({
+      ...prev,
+      [key]: {
+        ...(prev[key] || { precio: 0, stock: 0 }),
+        [field]: value,
+      },
+    }));
   };
 
-  // Guardar variante en Supabase
-  async function guardarVariante(variant: ProductVariant) {
-    setSavingId(`var-${variant.id}`);
-    const { error } = await (supabase as any)
-      .from("product_variants")
-      .update({ stock: variant.stock, precio: variant.precio })
-      .eq("id", variant.id);
+  async function toggleActivo(product: Product) {
+    const isCurrentlyActive = product.activo !== false && product.activo !== "false" && product.activo !== 0;
+    const nuevoEstado = !isCurrentlyActive;
 
-    setSavingId(null);
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, activo: nuevoEstado } : p))
+    );
+
+    const { error } = await (supabase as any)
+      .from("products")
+      .update({ activo: nuevoEstado })
+      .eq("id", product.id);
+
     if (error) {
-      alert("Error al actualizar la variante: " + error.message);
-    } else {
-      alert(`Variante "${variant.nombre}" actualizada.`);
+      alert("Error al cambiar estado: " + error.message);
+      cargarInventario();
     }
   }
 
-  // Guardar producto simple (sin variantes)
   async function guardarProductoSimple(product: Product) {
     setSavingId(`prod-${product.id}`);
     const { error } = await supabase
@@ -170,6 +173,58 @@ function Inventario() {
       alert("Error al actualizar el producto: " + error.message);
     } else {
       alert(`Producto "${product.nombre}" actualizado.`);
+    }
+  }
+
+  async function guardarVarianteEstandar(product: Product, nombreTamaño: string, porcionesDef: string) {
+    const key = `${product.id}-${nombreTamaño}`;
+    const datosInput = variantInputs[key] || { precio: 0, stock: 0 };
+
+    if (!datosInput.precio || datosInput.precio <= 0) {
+      alert("Por favor ingresa un precio válido mayor a 0.");
+      return;
+    }
+
+    setSavingId(`var-${product.id}-${nombreTamaño}`);
+
+    const existente = product.variants?.find(
+      (v: ProductVariant) => v.nombre.toLowerCase() === nombreTamaño.toLowerCase()
+    );
+
+    let errorSupabase = null;
+
+    if (existente && existente.id) {
+      const { error } = await (supabase as any)
+        .from("product_variants")
+        .update({
+          precio: datosInput.precio,
+          stock: datosInput.stock,
+          porciones: porcionesDef,
+        })
+        .eq("id", existente.id);
+      errorSupabase = error;
+    } else {
+      const { error } = await (supabase as any)
+        .from("product_variants")
+        .insert([
+          {
+            product_id: product.id,
+            nombre: nombreTamaño,
+            precio: datosInput.precio,
+            stock: datosInput.stock,
+            porciones: porcionesDef,
+          },
+        ]);
+      errorSupabase = error;
+    }
+
+    setSavingId(null);
+
+    if (errorSupabase) {
+      alert("Error al guardar la variante: " + errorSupabase.message);
+    } else {
+      alert(`Tamaño "${nombreTamaño}" guardado con éxito para ${product.nombre}.`);
+      cargarInventario();
     }
   }
 
@@ -198,6 +253,7 @@ function Inventario() {
                   <th className="p-3 text-center">Variantes / Tamaños</th>
                   <th className="p-3 text-center">Stock</th>
                   <th className="p-3 text-right">Precio ($)</th>
+                  <th className="p-3 text-center">Estado (On/Off)</th>
                   <th className="p-3 text-center">Acciones</th>
                 </tr>
               </thead>
@@ -208,16 +264,15 @@ function Inventario() {
                     ? p.variants!.reduce((acc, v) => acc + (v.stock || 0), 0)
                     : p.stock || 0;
 
+                  const estaActivo = p.activo !== false && p.activo !== "false" && p.activo !== 0;
+                  const esPastel = p.categoria?.toLowerCase().includes("pastel");
+
                   return (
                     <React.Fragment key={p.id}>
                       <tr className="hover:bg-crema/10 transition">
                         <td className="p-3 font-bold flex items-center gap-2">
                           {p.img && (
-                            <img
-                              src={p.img}
-                              alt={p.nombre}
-                              className="w-8 h-8 rounded-lg object-cover"
-                            />
+                            <img src={p.img} alt={p.nombre} className="w-8 h-8 rounded-lg object-cover" />
                           )}
                           <span>{p.nombre}</span>
                         </td>
@@ -229,19 +284,22 @@ function Inventario() {
                         </td>
 
                         <td className="p-3 text-center">
-                          {tieneVariantes ? (
+                          {tieneVariantes || esPastel ? (
                             <button
                               onClick={() => toggleExpand(p.id)}
                               className="rounded-lg bg-shocking/10 px-2.5 py-1 text-xs font-bold text-shocking hover:bg-shocking/20 transition"
                             >
-                              {expandedRow === p.id ? "▲ Ocultar Tamaños" : `▼ Desglosar (${p.variants!.length})`}
+                              {expandedRow === p.id
+                                ? "▲ Ocultar Tamaños"
+                                : tieneVariantes
+                                ? `▼ Desglosar (${p.variants!.length} tamaños)`
+                                : "➕ Configurar Tamaños"}
                             </button>
                           ) : (
                             <span className="text-mocha/50 italic">Sin variantes</span>
                           )}
                         </td>
 
-                        {/* STOCK EDITABLE SI NO TIENE VARIANTES */}
                         <td className="p-3 text-center">
                           {tieneVariantes ? (
                             <span
@@ -255,27 +313,22 @@ function Inventario() {
                             <input
                               type="number"
                               value={p.stock ?? 0}
-                              onChange={(e) =>
-                                handleProductChange(p.id, "stock", Number(e.target.value))
-                              }
+                              onChange={(e) => handleProductChange(p.id, "stock", Number(e.target.value))}
                               className="w-20 rounded border border-mocha/20 px-2 py-1 text-center font-bold text-mocha focus:ring-2 focus:ring-shocking"
                             />
                           )}
                         </td>
 
-                        {/* PRECIO EDITABLE SI NO TIENE VARIANTES */}
                         <td className="p-3 text-right">
                           {tieneVariantes ? (
-                            <span className="font-semibold">${p.precio || 0}</span>
+                            <span className="font-semibold">Variable</span>
                           ) : (
                             <div className="flex items-center justify-end gap-1">
                               <span className="text-mocha/60">$</span>
                               <input
                                 type="number"
                                 value={p.precio ?? 0}
-                                onChange={(e) =>
-                                  handleProductChange(p.id, "precio", Number(e.target.value))
-                                }
+                                onChange={(e) => handleProductChange(p.id, "precio", Number(e.target.value))}
                                 className="w-20 rounded border border-mocha/20 px-2 py-1 text-right font-bold text-mocha focus:ring-2 focus:ring-shocking"
                               />
                             </div>
@@ -283,7 +336,20 @@ function Inventario() {
                         </td>
 
                         <td className="p-3 text-center">
-                          {!tieneVariantes && (
+                          <button
+                            onClick={() => toggleActivo(p)}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition shadow-sm ${
+                              estaActivo
+                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                            }`}
+                          >
+                            {estaActivo ? "🟢 Activo" : "⚪ Inactivo"}
+                          </button>
+                        </td>
+
+                        <td className="p-3 text-center">
+                          {!tieneVariantes && !esPastel && (
                             <button
                               onClick={() => guardarProductoSimple(p)}
                               disabled={savingId === `prod-${p.id}`}
@@ -295,66 +361,74 @@ function Inventario() {
                         </td>
                       </tr>
 
-                      {/* SUB-TABLA DE VARIANTES (TAMAÑOS) */}
-                      {tieneVariantes && expandedRow === p.id && (
+                      {expandedRow === p.id && esPastel && (
                         <tr>
-                          <td colSpan={6} className="bg-crema/20 p-4 border-l-4 border-shocking">
-                            <div className="font-bold text-shocking mb-2 text-xs">
-                              📏 Gestión de Stock y Precios por Tamaño para "{p.nombre}"
+                          <td colSpan={7} className="bg-crema/20 p-4 border-l-4 border-shocking">
+                            <div className="font-bold text-shocking mb-3 text-xs flex items-center justify-between">
+                              <span>🎂 Tamaños Oficiales para "{p.nombre}" (Sincronizados con la tienda)</span>
                             </div>
+
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              {p.variants!.map((v) => (
-                                <div
-                                  key={v.id}
-                                  className="bg-white p-3 rounded-xl shadow-sm border border-mocha/10 space-y-2"
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <span className="font-bold text-mocha uppercase text-xs">
-                                      {v.nombre}
-                                    </span>
-                                    <span className="text-[10px] text-mocha/60">
-                                      {v.porciones}
-                                    </span>
-                                  </div>
+                              {TAMAÑOS_ESTANDAR_PASTELES.map((est) => {
+                                const inputKey = `${p.id}-${est.nombre}`;
+                                const currentVals = variantInputs[inputKey] || { precio: 0, stock: 0 };
+                                const isSaving = savingId === `var-${p.id}-${est.nombre}`;
 
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                      <label className="block text-[10px] text-mocha/70 font-semibold">
-                                        Precio ($)
-                                      </label>
-                                      <input
-                                        type="number"
-                                        value={v.precio}
-                                        onChange={(e) =>
-                                          handleVariantChange(p.id, v.id, "precio", Number(e.target.value))
-                                        }
-                                        className="w-full rounded border border-mocha/20 px-2 py-1 text-xs font-bold"
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-[10px] text-mocha/70 font-semibold">
-                                        Stock (un.)
-                                      </label>
-                                      <input
-                                        type="number"
-                                        value={v.stock}
-                                        onChange={(e) =>
-                                          handleVariantChange(p.id, v.id, "stock", Number(e.target.value))
-                                        }
-                                        className="w-full rounded border border-mocha/20 px-2 py-1 text-xs font-bold"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <button
-                                    onClick={() => guardarVariante(v)}
-                                    disabled={savingId === `var-${v.id}`}
-                                    className="w-full mt-1 rounded-lg bg-mocha px-2 py-1 text-[10px] font-bold text-white hover:bg-mocha/90 disabled:opacity-50"
+                                return (
+                                  <div
+                                    key={est.nombre}
+                                    className="bg-white p-3 rounded-xl shadow-sm border border-mocha/10 space-y-2"
                                   >
-                                    {savingId === `var-${v.id}` ? "Guardando..." : "Guardar Tamaño"}
-                                  </button>
-                                </div>
-                              ))}
+                                    <div className="flex justify-between items-center">
+                                      <span className="font-bold text-mocha uppercase text-xs bg-cream px-2 py-0.5 rounded">
+                                        {est.nombre}
+                                      </span>
+                                      <span className="text-[10px] text-mocha/60 font-medium">
+                                        {est.porciones}
+                                      </span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-[10px] text-mocha/70 font-semibold">
+                                          Precio ($)
+                                        </label>
+                                        <input
+                                          type="number"
+                                          placeholder="Ej. 150"
+                                          value={currentVals.precio || ""}
+                                          onChange={(e) =>
+                                            handleVariantInputChange(p.id, est.nombre, "precio", Number(e.target.value))
+                                          }
+                                          className="w-full rounded border border-mocha/20 px-2 py-1 text-xs font-bold"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] text-mocha/70 font-semibold">
+                                          Stock (un.)
+                                        </label>
+                                        <input
+                                          type="number"
+                                          placeholder="0"
+                                          value={currentVals.stock ?? ""}
+                                          onChange={(e) =>
+                                            handleVariantInputChange(p.id, est.nombre, "stock", Number(e.target.value))
+                                          }
+                                          className="w-full rounded border border-mocha/20 px-2 py-1 text-xs font-bold"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      onClick={() => guardarVarianteEstandar(p, est.nombre, est.porciones)}
+                                      disabled={isSaving}
+                                      className="w-full mt-1 rounded-lg bg-mocha px-2 py-1.5 text-[11px] font-bold text-white hover:bg-mocha/90 disabled:opacity-50 transition"
+                                    >
+                                      {isSaving ? "Guardando..." : `Guardar ${est.nombre}`}
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </td>
                         </tr>

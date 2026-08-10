@@ -7,11 +7,24 @@ import { ProductCard } from "./ProductCard";
 import { GiftModal } from "./GiftModal";
 import { CartPanel } from "./CartPanel";
 
-// --- MEJORA: Definición de tipo para la dirección ---
 export interface AddressValue {
   direccion_texto: string;
   latitud: number;
   longitud: number;
+}
+
+export interface ProductVariant {
+  id: number;
+  product_id: number;
+  nombre: string;
+  precio: number;
+  stock: number;
+  porciones?: string;
+}
+
+// Extendemos el tipo Product localmente para incluir las variantes de la BD
+export interface ProductWithVariants extends Product {
+  variants?: ProductVariant[];
 }
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -39,7 +52,7 @@ const CATEGORIAS_FIJAS = [
 const CATEGORIA_INICIAL = "Galletas";
 
 function CounterStoreInner() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithVariants[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [categoria, setCategoria] = useState<string>(CATEGORIA_INICIAL);
@@ -47,23 +60,73 @@ function CounterStoreInner() {
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const { totalItems } = useCart();
   
-  // --- MEJORA: Estado para sincronizar la dirección en el Checkout ---
   const [address, setAddress] = useState<AddressValue | null>(null);
 
-  useEffect(() => {
-    supabase
-      .from("products")
-      .select("*")
-      .eq("activo", "SI")
-      .order("categoria")
-      .then(({ data, error }) => {
-        if (error) {
-          setError("Oye Majito, no pudimos leer el catálogo (" + error.message + ").");
-        } else {
-          setProducts(data ?? []);
-        }
-        setLoading(false);
+  // --- FUNCIÓN MAESTRA DE CARGA DESDE SUPABASE (Única Fuente de Verdad) ---
+  const cargarCatalogoYVariantes = async () => {
+    try {
+      // 1. Consultar productos
+      const { data: prods, error: pErr } = await supabase
+        .from("products")
+        .select("*")
+        .order("categoria");
+
+      if (pErr) throw pErr;
+
+      // 2. Consultar variantes de productos (para los pasteles)
+      const { data: vars, error: vErr } = await (supabase as any)
+        .from("product_variants")
+        .select("*");
+
+      if (vErr) throw vErr;
+
+      const variantesLista = (vars || []) as ProductVariant[];
+
+      // 3. Filtrar activos y asociar variantes a cada producto correspondiente
+      const activos = (prods ?? []).filter((p: any) => 
+        p.activo === true || p.activo === "SI" || p.activo === 1 || p.activo === "true" || p.activo === "activo"
+      );
+
+      const unificados = activos.map((p: any) => {
+        const misVariantes = variantesLista.filter(
+          (v: ProductVariant) => String(v.product_id) === String(p.id)
+        );
+        return {
+          ...p,
+          variants: misVariantes,
+        };
       });
+
+      setProducts(unificados);
+      setError(null);
+    } catch (err: any) {
+      setError("Oye Majito, no pudimos leer el catálogo (" + err.message + ").");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    cargarCatalogoYVariantes();
+
+    // --- SUSCRIPCIÓN EN TIEMPO REAL A SUPABASE ---
+    const channel = supabase
+      .channel('public-counter-catalog')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'products' },
+        () => { cargarCatalogoYVariantes(); }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'product_variants' },
+        () => { cargarCatalogoYVariantes(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const categorias = useMemo(() => {
@@ -105,7 +168,7 @@ function CounterStoreInner() {
     return list;
   }, [products, categoria]);
 
-  if (loading) return <p className="text-mocha">Cargando el mostrador…</p>;
+  if (loading) return <p className="text-mocha p-8 text-center font-bold">Cargando el mostrador actualizado...</p>;
   if (error)
     return (
       <div className="rounded-2xl border border-shocking/30 bg-shocking/10 p-5 text-sm text-shocking">
@@ -154,13 +217,12 @@ function CounterStoreInner() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
             {visibles.map((p) => (
-              <ProductCard key={p.id} product={p} onGiftClick={setGiftProduct} />
+              <ProductCard key={p.id} product={p as Product} onGiftClick={setGiftProduct} />
             ))}
           </div>
         )}
       </div>
 
-      {/* --- MEJORA: Pasamos address y setAddress al CartPanel --- */}
       <div className="hidden md:sticky md:top-4 md:self-start md:block">
         <CartPanel address={address} setAddress={setAddress} />
       </div>
@@ -176,7 +238,6 @@ function CounterStoreInner() {
             >
               <X className="h-5 w-5" />
             </button>
-            {/* --- MEJORA: Pasamos address y setAddress al CartPanel --- */}
             <CartPanel address={address} setAddress={setAddress} />
           </div>
         </div>
@@ -185,7 +246,7 @@ function CounterStoreInner() {
       <div className="fixed inset-x-4 bottom-4 z-40 flex items-center gap-2 overflow-hidden rounded-full border border-orange-300/30 bg-[rgba(255,138,42,0.14)] px-3 py-3 shadow-[0_10px_40px_-10px_rgba(255,138,42,0.5)] backdrop-blur-xl md:hidden">
         <span aria-hidden className="pointer-events-none absolute -left-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-400/30 blur-3xl animate-pulse" />
         <span aria-hidden className="pointer-events-none absolute -right-10 top-1/2 h-40 w-40 -translate-y-1/2 rounded-full bg-orange-500/20 blur-3xl animate-pulse [animation-delay:600ms]" />
-        <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-orange-200/20 to-transparent blur-md" />
+        <span aria-hidden className="pointer-events-none absolute inset-0 rounded-full bg-linear-to-r from-transparent via-orange-200/20 to-transparent blur-md" />
         <Link
           to="/personalizado"
           className="relative flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sweet-pink/90 px-3 py-2 text-xs font-bold text-foreground shadow-sm transition hover:-translate-y-0.5"
