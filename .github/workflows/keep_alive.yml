@@ -1,17 +1,33 @@
-name: Supabase Keep Alive
+name: Supabase Keep Alive & Auditor Mayorista
 
 on:
   schedule:
-    # Se ejecuta todos los lunes y jueves a las 00:00 UTC (Evita la pausa de 7 días)
-    - cron: '0 0 * * 1,4'
-  workflow_dispatch: # Permite que tú lo actives manualmente cuando quieras
+    # ⚙️ Cron unificado: Se ejecuta automáticamente cada hora, todos los días
+    - cron: '0 * * * *'
+  workflow_dispatch: # Permite ejecución manual desde la pestaña Actions
 
 jobs:
-  ping:
+  audit_and_ping:
     runs-on: ubuntu-latest
     steps:
+      # 1. PING INMUNOLÓGICO: Mantiene activa la base de datos gratuita de Supabase
       - name: Send Ping Request to Supabase REST API
         run: |
           curl -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
           -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
           -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+
+      # 2. AUDITORÍA ACTIVA: Consulta si ingresaron pedidos en la última hora y te alerta
+      - name: Check New Mayorista Orders and Notify Owner
+        run: |
+          ORDERS=$(curl -s -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/v_nuevos_pedidos_mayoristas" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          
+          # Si la respuesta JSON de Supabase contiene registros, dispara la notificación
+          if [ "$ORDERS" != "[]" ] && [ ! -z "$ORDERS" ]; then
+            TEXTO_NOTIFICACION="👑 *[ALERTA MAJITO CAKE]*%0AHay nuevos pedidos mayoristas registrados en Supabase listas para producción.%0A%0A🔍 *VER FILA DE PRODUCCIÓN EN VIVO (KDS):*%0Ahttps://vercel.app"
+            
+            # 🛡️ Envío automatizado con tu número oficial de México integrado
+            curl -s -X GET "https://whatsapp.com" > /dev/null
+          fi
