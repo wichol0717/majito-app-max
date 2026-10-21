@@ -4,7 +4,7 @@ on:
   schedule:
     # ⚙️ Cron unificado: Se ejecuta automáticamente cada hora, todos los días
     - cron: '0 * * * *'
-  workflow_dispatch: # Permite ejecución manual desde la pestaña Actions
+  workflow_dispatch: # Permite la ejecución manual desde la pestaña Actions
 
 jobs:
   audit_and_ping:
@@ -28,6 +28,6 @@ jobs:
           if [ "$ORDERS" != "[]" ] && [ ! -z "$ORDERS" ]; then
             TEXTO_NOTIFICACION="👑 *[ALERTA MAJITO CAKE]*%0AHay nuevos pedidos mayoristas registrados en Supabase listas para producción.%0A%0A🔍 *VER FILA DE PRODUCCIÓN EN VIVO (KDS):*%0Ahttps://vercel.app"
             
-            # 🛡️ Envío automatizado con tu número oficial de México integrado
-            curl -s -X GET "https://whatsapp.com" > /dev/null
+            # 🛡️ Envío automatizado utilizando tu Secreto Dinámico de GitHub
+            curl -s -X GET "https://whatsapp.com{{ secrets.TELEFONO_DUENO }}&text=$TEXTO_NOTIFICACION" > /dev/null
           fi
